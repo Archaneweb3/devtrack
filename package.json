@@ -2,11 +2,17 @@
   "name": "devtrack",
   "version": "1.0.0",
   "private": true,
-  "description": "Solana memecoin dev wallet tracker — track record, winrate graduate, trace on-chain, signal Telegram",
+  "description": "Solana memecoin dev wallet tracker — track record, winrate graduate, trace on-chain, signal Telegram, auto-buy bot",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "bot": "node bot.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "@solana/web3.js": "^1.95.3",
+    "bs58": "^6.0.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }

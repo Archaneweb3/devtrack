@@ -8,6 +8,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+
+// WebSocket global (Node 21+) atau paket 'ws' sebagai fallback (Railway/Node lama)
+const WS = globalThis.WebSocket || require('ws');
 
 const CONFIG_FILE = path.join(__dirname, 'bot-config.json');
 const LOG_FILE = path.join(__dirname, 'bot-trades.log');
@@ -28,9 +32,36 @@ async function getSolPrice() {
 function usd(mcapSol) { return solPrice ? '$' + Math.round(mcapSol * solPrice).toLocaleString('en-US') : '—'; }
 function usdRaw(mcapSol) { return solPrice ? Math.round(mcapSol * solPrice) : ''; } // tanpa koma, aman untuk CSV
 
+// config dari environment variables (dipakai di Railway/cloud); menang atas file
+function envConfig() {
+  const e = process.env;
+  const c = {};
+  if (e.BOT_MODE) c.mode = e.BOT_MODE;
+  if (e.BOT_BUY_SOL) c.buySol = parseFloat(e.BOT_BUY_SOL);
+  if (e.BOT_SLIPPAGE) c.slippage = parseFloat(e.BOT_SLIPPAGE);
+  if (e.BOT_PRIORITY_FEE) c.priorityFee = parseFloat(e.BOT_PRIORITY_FEE);
+  if (e.BOT_MAX_BUYS_PER_DAY) c.maxBuysPerDevPerDay = parseInt(e.BOT_MAX_BUYS_PER_DAY, 10);
+  if (e.TG_TOKEN) c.tgToken = e.TG_TOKEN;
+  if (e.TG_CHAT) c.tgChat = e.TG_CHAT;
+  if (e.HELIUS_KEY) c.heliusKey = e.HELIUS_KEY;
+  if (e.PRIVATE_KEY) c.privateKey = e.PRIVATE_KEY;
+  if (e.BOT_TAKE_PROFIT) { try { c.takeProfit = JSON.parse(e.BOT_TAKE_PROFIT); } catch { /* abaikan */ } }
+  if (e.BOT_STOP_LOSS) { try { c.stopLoss = JSON.parse(e.BOT_STOP_LOSS); } catch { /* abaikan */ } }
+  if (e.BOT_WATCHLIST) {
+    const raw = e.BOT_WATCHLIST.trim();
+    try {
+      c.watchlist = raw.startsWith('[')
+        ? JSON.parse(raw)
+        : raw.split(',').map(s => s.trim()).filter(Boolean).map(w => ({ wallet: w, label: '' }));
+    } catch { c.watchlist = []; }
+  }
+  return c;
+}
+
 function loadConfig() {
-  try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); }
-  catch { return {}; }
+  let file = {};
+  try { file = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch { /* tak ada file (mis. di Railway) */ }
+  return { ...file, ...envConfig() }; // env override file
 }
 
 let cfg = loadConfig();
@@ -48,6 +79,7 @@ function labelOf(wallet) {
 // ---------- posisi terbuka + aturan take-profit / stop-loss ----------
 const positions = new Map(); // mint -> { entryMcapSol, label, symbol, wallet, remainingPct, firedTiers:Set, openedAt }
 let activeWs = null;
+let lastEventAt = 0;
 
 // aturan default: jual 50% di 2x. Bisa dioverride via cfg.takeProfit = [{mult,pct}, ...]
 function tpTiers() {
@@ -294,7 +326,7 @@ async function onLaunch(ev) {
 
 // ---------- koneksi WebSocket + auto-reconnect ----------
 function connect() {
-  const ws = new WebSocket(WS_URL);
+  const ws = new WS(WS_URL);
   activeWs = ws;
   ws.onopen = () => {
     ws.send(JSON.stringify({ method: 'subscribeNewToken' }));
@@ -305,6 +337,7 @@ function connect() {
     log(`Tersambung ke stream pump.fun. Mode: ${(cfg.mode || 'simulation').toUpperCase()} | pantau ${watchSet().size} dev | beli ${cfg.buySol || 0.05} SOL | take-profit: ${tp}`);
   };
   ws.onmessage = e => {
+    lastEventAt = Date.now();
     let d; try { d = JSON.parse(e.data); } catch { return; }
     if (!d.mint) return;
     if (d.txType === 'create') { onLaunch(d); return; }
@@ -315,17 +348,36 @@ function connect() {
   ws.onerror = () => { try { ws.close(); } catch { /* noop */ } };
 }
 
+// ---------- health server (Railway/cloud butuh proses bind ke port; juga status page) ----------
+function startHealthServer() {
+  const port = process.env.PORT;
+  if (!port) return; // lokal tanpa PORT: lewati
+  http.createServer((req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'running',
+      mode: cfg.mode || 'simulation',
+      watching: watchSet().size,
+      openPositions: positions.size,
+      wsConnected: activeWs && activeWs.readyState === 1,
+      lastEventAgoSec: lastEventAt ? Math.round((Date.now() - lastEventAt) / 1000) : null,
+    }));
+  }).listen(port, () => log(`Health server di port ${port}`));
+}
+
 // ---------- start ----------
 (async () => {
-  if (!fs.existsSync(CONFIG_FILE)) {
-    log('bot-config.json belum ada. Buka website lokal → tab Bot → aktifkan, atau salin bot-config.example.json.');
+  const hasConfig = fs.existsSync(CONFIG_FILE) || Object.keys(envConfig()).length > 0;
+  if (!hasConfig) {
+    log('Config belum ada. Lokal: buka website → tab Auto-buy → Simpan. Cloud: set environment variables (lihat RAILWAY.md).');
     process.exit(1);
   }
-  log(`devtrack bot start. Watchlist: ${watchSet().size} dev.`);
+  startHealthServer();
+  log(`devtrack bot start. Watchlist: ${watchSet().size} dev. Sumber config: ${fs.existsSync(CONFIG_FILE) ? 'file' : 'env'}${process.env.BOT_WATCHLIST ? '+env' : ''}.`);
   if ((cfg.mode || 'simulation') === 'live') {
     try { connection = await initLive(); log(`Mode LIVE aktif — wallet ${signer.publicKey.toBase58()}`); }
     catch (e) { log('Gagal init live: ' + e.message + ' — jatuh ke simulasi.'); cfg.mode = 'simulation'; }
   }
-  if (watchSet().size === 0) log('PERINGATAN: watchlist kosong — tidak ada yang dipantau. Tambahkan dev di website.');
+  if (watchSet().size === 0) log('PERINGATAN: watchlist kosong — tidak ada yang dipantau.');
   connect();
 })();
