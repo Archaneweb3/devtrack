@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>devtrack — Solana Dev Wallet Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">devtrack<span class="brand-tag">SOL</span></div>
+  <nav class="nav">
+    <button class="nav-btn active" data-tab="scan">Scanner</button>
+    <button class="nav-btn" data-tab="watchlist">Watchlist</button>
+    <button class="nav-btn" data-tab="settings">Pengaturan</button>
+  </nav>
+  <div class="search-box">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="global-search" type="text" placeholder="Tempel CA token atau wallet dev, lalu Enter" spellcheck="false">
+    <span class="search-hint">CA / WALLET</span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ SCANNER ============ -->
+  <section id="tab-scan" class="tab active">
+    <div class="toolbar">
+      <select id="scan-mode">
+        <option value="graduated" selected>Baru graduate — dev winrate tinggi</option>
+        <option value="graduated24">Semua graduate 24 jam (scan penuh)</option>
+        <option value="new">Token terbaru</option>
+        <option value="top">Top market cap</option>
+      </select>
+      <select id="scan-limit">
+        <option value="48">48 token</option>
+        <option value="96" selected>96 token</option>
+        <option value="150">150 token</option>
+        <option value="300">300 token</option>
+      </select>
+      <label class="filter-field" title="Hanya tampilkan dev dengan jumlah launch minimal ini">
+        <span>Min launch</span>
+        <input id="f-launch" type="number" min="1" value="3">
+      </label>
+      <label class="filter-field" title="Hanya tampilkan dev dengan graduation rate minimal ini">
+        <span>Min winrate</span>
+        <input id="f-winrate" type="number" min="0" max="100" value="50">
+        <span class="unit">%</span>
+      </label>
+      <button id="btn-scan" class="btn btn-primary">Mulai scan</button>
+      <button id="btn-stop" class="btn hidden">Stop</button>
+      <button id="btn-send-signal" class="btn hidden">Kirim signal Telegram</button>
+      <div class="toolbar-status"><span id="scan-filtered"></span> <span id="scan-status"></span></div>
+    </div>
+    <div class="progress-track hidden" id="scan-progress"><div id="scan-bar"></div></div>
+
+    <div class="table-card">
+      <table class="data-table" id="scan-table">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th>Dev</th>
+            <th class="col-score">Skor</th>
+            <th class="num">Launch</th>
+            <th class="num">Graduate</th>
+            <th class="num">ATH terbaik</th>
+            <th>Launch terakhir</th>
+            <th>Sinyal</th>
+            <th class="col-act"></th>
+          </tr>
+        </thead>
+        <tbody id="scan-body">
+          <tr><td colspan="9" class="empty-cell">Jalankan scan untuk menemukan dev berdasarkan track record on-chain: tingkat graduate, ATH tertinggi, konsistensi, dan deteksi serial rugger.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ PENGATURAN ============ -->
+  <section id="tab-settings" class="tab">
+    <div class="settings-grid">
+      <div class="settings-card">
+        <h3>Telegram — kirim signal</h3>
+        <p class="hint-text">Signal watchlist (dev launch token baru, lengkap dengan CA) dikirim <b>otomatis selama halaman ini terbuka</b>; signal hasil scan dikirim lewat tombol "Kirim signal Telegram" setelah scan selesai. Token &amp; key tersimpan hanya di browser kamu (localStorage), tidak pernah disimpan di server.</p>
+        <label class="field">
+          <span>Bot token</span>
+          <input id="tg-token" type="text" placeholder="123456789:AAF..." spellcheck="false">
+        </label>
+        <label class="field">
+          <span>Chat ID</span>
+          <input id="tg-chat" type="text" placeholder="misal 5512345678" spellcheck="false">
+        </label>
+        <div class="settings-actions">
+          <button id="btn-tg-save" class="btn btn-primary">Simpan</button>
+          <button id="btn-tg-test" class="btn">Kirim pesan tes</button>
+          <span id="tg-status" class="dim"></span>
+        </div>
+        <div id="monitor-status" class="monitor-status"></div>
+      </div>
+      <div class="settings-card">
+        <h3>Helius — dukungan lintas launchpad</h3>
+        <p class="hint-text">Tanpa key: analisis hanya pump.fun + trace on-chain dasar. Dengan Helius (gratis): paste CA <b>Meteora/launchpad lain</b> tetap ketemu dev-nya, plus tombol <b>"Scan deploy lintas launchpad"</b> di profil dev untuk melihat SEMUA token yang pernah dia deploy, launchpad apa pun.</p>
+        <label class="field">
+          <span>Helius API key</span>
+          <input id="helius-key" type="text" placeholder="key dari dashboard.helius.dev (daftar gratis)" spellcheck="false">
+        </label>
+        <div class="settings-actions">
+          <button id="btn-helius-save" class="btn btn-primary">Simpan</button>
+          <button id="btn-helius-test" class="btn">Tes koneksi</button>
+          <span id="helius-status" class="dim"></span>
+        </div>
+      </div>
+      <div class="settings-card">
+        <h3>Cara mendapatkan token &amp; chat ID</h3>
+        <ol class="steps">
+          <li>Buka Telegram, chat <span class="addr">@BotFather</span>, kirim <span class="addr">/newbot</span>, ikuti instruksinya — kamu dapat <b>bot token</b>.</li>
+          <li>Chat <span class="addr">@userinfobot</span> untuk melihat <b>chat ID</b> kamu (angka).</li>
+          <li>Buka chat dengan bot barumu dan tekan <b>Start</b> (wajib, supaya bot boleh mengirimimu pesan).</li>
+          <li>Tempel token &amp; chat ID di sini, Simpan, lalu "Kirim pesan tes".</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WATCHLIST ============ -->
+  <section id="tab-watchlist" class="tab">
+    <div class="toolbar">
+      <input id="wl-wallet" type="text" placeholder="Alamat wallet dev" spellcheck="false">
+      <input id="wl-label" type="text" placeholder="Label (opsional)" class="input-sm" spellcheck="false">
+      <button id="btn-wl-add" class="btn btn-primary">Tambah</button>
+      <button id="btn-wl-refresh" class="btn">Refresh</button>
+      <div class="toolbar-status" id="wl-status"></div>
+    </div>
+
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Dev</th>
+            <th>Label</th>
+            <th class="col-score">Skor</th>
+            <th class="num">Launch</th>
+            <th class="num">Graduate</th>
+            <th class="num">ATH terbaik</th>
+            <th>Launch terakhir</th>
+            <th class="col-act"></th>
+          </tr>
+        </thead>
+        <tbody id="wl-body">
+          <tr><td colspan="8" class="empty-cell">Watchlist kosong.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- ============ DRAWER DETAIL ============ -->
+<div id="overlay" class="overlay hidden"></div>
+<aside id="drawer" class="drawer">
+  <div class="drawer-head">
+    <span class="drawer-title">Profil developer</span>
+    <button id="drawer-close" class="icon-btn" title="Tutup">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
+
+<script src="app.js"></script>
+</body>
+</html>
