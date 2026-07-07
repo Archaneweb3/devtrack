@@ -16,6 +16,7 @@
   <nav class="nav">
     <button class="nav-btn active" data-tab="scan">Scanner</button>
     <button class="nav-btn" data-tab="watchlist">Watchlist</button>
+    <button class="nav-btn" data-tab="bot">Auto-buy</button>
     <button class="nav-btn" data-tab="settings">Pengaturan</button>
   </nav>
   <div class="search-box">
@@ -76,6 +77,50 @@
           <tr><td colspan="9" class="empty-cell">Jalankan scan untuk menemukan dev berdasarkan track record on-chain: tingkat graduate, ATH tertinggi, konsistensi, dan deteksi serial rugger.</td></tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- ============ AUTO-BUY BOT ============ -->
+  <section id="tab-bot" class="tab">
+    <div class="settings-grid">
+      <div class="settings-card" style="grid-column: 1 / -1">
+        <h3>Auto-buy bot — beli otomatis saat dev watchlist launch</h3>
+        <p class="hint-text">Bot lokal mendengar launch pump.fun <b>real-time</b> (WebSocket, delay ~1–3 detik) dan bertindak saat creator-nya ada di watchlist kamu. Atur di sini, lalu jalankan <span class="addr">node bot.js</span> di folder ini. Bot berjalan di komputermu — private key tidak pernah menyentuh website.</p>
+        <div id="bot-local-warn" class="error-box hidden">Panel ini hanya berfungsi saat website dibuka <b>secara lokal</b> (localhost). Auto-buy tidak bisa jalan di versi Vercel karena butuh private key di mesinmu.</div>
+      </div>
+
+      <div class="settings-card">
+        <h3>Parameter beli</h3>
+        <div class="bot-mode">
+          <label class="radio"><input type="radio" name="bot-mode" value="simulation" checked> <span><b>Simulasi</b> — catat &amp; kirim sinyal Telegram, tanpa uang</span></label>
+          <label class="radio"><input type="radio" name="bot-mode" value="live"> <span><b>Live</b> — beli sungguhan pakai wallet burner</span></label>
+        </div>
+        <label class="field"><span>Jumlah beli per token (SOL)</span><input id="bot-sol" type="number" step="0.01" min="0.01" value="0.05"></label>
+        <label class="field"><span>Slippage maksimal (%)</span><input id="bot-slippage" type="number" min="1" max="100" value="15"></label>
+        <label class="field"><span>Priority fee (SOL)</span><input id="bot-priority" type="number" step="0.0001" min="0" value="0.001"></label>
+        <label class="field"><span>Maks beli per dev per hari</span><input id="bot-maxbuys" type="number" min="1" value="1"></label>
+      </div>
+
+      <div class="settings-card">
+        <h3 id="bot-key-title">Wallet burner (hanya untuk mode Live)</h3>
+        <p class="hint-text">Pakai wallet <b>khusus bot</b> berisi dana kecil — <b>bukan</b> wallet utamamu. Private key format base58 (ekspor dari Phantom: Settings → Export Private Key). Tersimpan hanya di <span class="addr">bot-config.json</span> di komputermu, tidak pernah dikirim ke server mana pun.</p>
+        <label class="field"><span>Private key (base58)</span><input id="bot-key" type="password" placeholder="hanya diperlukan untuk mode live" spellcheck="false"></label>
+        <div class="settings-actions">
+          <button id="btn-bot-save" class="btn btn-primary">Simpan &amp; sinkron ke bot</button>
+          <span id="bot-status" class="dim"></span>
+        </div>
+        <div id="bot-sync-info" class="monitor-status"></div>
+      </div>
+
+      <div class="settings-card" style="grid-column: 1 / -1">
+        <h3>Cara menjalankan</h3>
+        <ol class="steps">
+          <li>Isi parameter di atas → <b>Simpan &amp; sinkron ke bot</b> (menulis <span class="addr">bot-config.json</span>).</li>
+          <li>Buka terminal di folder ini, jalankan <span class="addr">node bot.js</span>. Biarkan jendela terbuka — selama itu bot memantau.</li>
+          <li>Mode <b>Simulasi</b> dulu beberapa hari: setiap dev watchlist launch, kamu dapat sinyal Telegram tanpa uang. Cek akurasinya.</li>
+          <li>Kalau sudah yakin, pindah ke <b>Live</b> + isi private key wallet burner, Simpan lagi, restart bot. Untuk 24/7 taruh di VPS.</li>
+        </ol>
+      </div>
     </div>
   </section>
 

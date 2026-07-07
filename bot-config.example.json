@@ -1,0 +1,14 @@
+{
+  "mode": "simulation",
+  "buySol": 0.05,
+  "slippage": 15,
+  "priorityFee": 0.001,
+  "maxBuysPerDevPerDay": 1,
+  "privateKey": "",
+  "tgToken": "",
+  "tgChat": "",
+  "heliusKey": "",
+  "watchlist": [
+    { "wallet": "CONTOH_alamat_wallet_dev", "label": "opsional" }
+  ]
+}

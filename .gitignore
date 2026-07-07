@@ -1,4 +1,6 @@
 node_modules/
 data.json
+bot-config.json
+bot-trades.log
 .vercel/
 *.log

@@ -18,12 +18,38 @@ const routes = {
   telegram: require('./api/telegram'),
 };
 
+// jembatan bot (khusus lokal): browser push watchlist+settings → file yang dibaca bot.js
+const BOT_CONFIG = path.join(__dirname, 'bot-config.json');
+function readBotConfig() {
+  try { return JSON.parse(fs.readFileSync(BOT_CONFIG, 'utf8')); } catch { return {}; }
+}
+function writeBotConfig(patch) {
+  const cfg = { ...readBotConfig(), ...patch, updatedAt: Date.now() };
+  fs.writeFileSync(BOT_CONFIG, JSON.stringify(cfg, null, 2));
+  return cfg;
+}
+
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const p = url.pathname;
   try {
+    // sinkron config bot (lokal saja — dipakai bot.js untuk auto-buy)
+    if (p === '/api/bot-config') {
+      if (req.method === 'POST') {
+        let raw = '';
+        for await (const chunk of req) raw += chunk;
+        const body = raw ? JSON.parse(raw) : {};
+        writeBotConfig(body);
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ ok: true }));
+      }
+      const cfg = readBotConfig();
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ hasKey: !!cfg.privateKey, mode: cfg.mode || 'simulation', updatedAt: cfg.updatedAt || 0 }));
+    }
+
     if (p.startsWith('/api/')) {
       const name = p.slice('/api/'.length).split('/')[0];
       const handler = routes[name];

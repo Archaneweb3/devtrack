@@ -59,6 +59,13 @@ Grade: **A** ≥70 · **B** ≥50 · **C** ≥30 · **D** <30
 - **Tanpa key (gratis):** paste CA non-pump.fun → app mendeteksi mint on-chain dan mencari **wallet deployer**-nya via RPC (transaksi pertama sang mint), lalu membuka profilnya (trace tetap jalan; riwayat pump.fun-nya kosong kalau dia memang bukan dev pump.fun). Token yang riwayatnya sangat panjang butuh Helius.
 - **Dengan Helius API key (daftar gratis di dashboard.helius.dev, isi di Pengaturan):** RPC beralih ke Helius (trace lebih cepat & dalam), CA seaktif apa pun bisa dilacak, dan di profil dev muncul tombol **"Scan deploy lintas launchpad"** — memindai 500 transaksi terakhir wallet untuk menemukan semua token yang pernah dia deploy (pump.fun, Meteora DBC, launchpad lain), lengkap dengan FDV/likuiditas/volume dan hitungan berapa yang masih hidup.
 
+### 9. Auto-buy bot (lokal saja)
+Bot lokal (`bot.js`) mendengar launch pump.fun **real-time** via WebSocket PumpPortal (delay ~1–3 detik) dan bertindak saat creator-nya ada di watchlist.
+- Atur di tab **Auto-buy** di website lokal → "Simpan & sinkron ke bot" (menulis `bot-config.json`) → jalankan `node bot.js`.
+- **Mode simulasi** (default): catat + kirim sinyal Telegram, tanpa uang. **Mode live**: beli via PumpPortal Trade API (`node bot.js`, butuh `npm install @solana/web3.js bs58`).
+- Wallet burner khusus bot; private key hanya di `bot-config.json` lokal (di-gitignore), tidak pernah ke server/Vercel.
+- Pengaman: jumlah beli tetap, slippage/priority fee, maks beli per dev per hari.
+
 ## Catatan penting
 
 - Data hanya mencakup token yang dibuat lewat **pump.fun** (mayoritas memecoin Solana). Dev bisa saja memakai banyak wallet — skor tinggi bukan jaminan aman.

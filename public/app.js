@@ -53,7 +53,7 @@ function tgConfigured() { return !!(settings.tgToken && settings.tgChat); }
 function heliusConfigured() { return !!settings.heliusKey; }
 function hk() { return heliusConfigured() ? '&heliusKey=' + encodeURIComponent(settings.heliusKey) : ''; }
 function watchlistWallets() { return new Set(watchlist.map(w => w.wallet)); }
-function saveWatchlist() { store.set('watchlist', watchlist); }
+function saveWatchlist() { store.set('watchlist', watchlist); if (typeof syncBotConfig === 'function') syncBotConfig(); }
 function saveSettings() { store.set('settings', settings); }
 
 // ================= tabs =================
@@ -65,7 +65,68 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     $('#tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'watchlist') renderWatchlist(false);
     if (btn.dataset.tab === 'settings') renderSettings();
+    if (btn.dataset.tab === 'bot') renderBot();
   });
+});
+
+// ================= auto-buy bot =================
+let botCfg = store.get('botcfg', { mode: 'simulation', buySol: 0.05, slippage: 15, priorityFee: 0.001, maxBuysPerDevPerDay: 1, privateKey: '' });
+const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+
+function renderBot() {
+  $('#bot-local-warn').classList.toggle('hidden', isLocal);
+  document.querySelector(`input[name="bot-mode"][value="${botCfg.mode}"]`).checked = true;
+  $('#bot-sol').value = botCfg.buySol;
+  $('#bot-slippage').value = botCfg.slippage;
+  $('#bot-priority').value = botCfg.priorityFee;
+  $('#bot-maxbuys').value = botCfg.maxBuysPerDevPerDay;
+  $('#bot-key').value = botCfg.privateKey || '';
+  refreshBotSyncInfo();
+}
+
+async function refreshBotSyncInfo() {
+  const el = $('#bot-sync-info');
+  if (!isLocal) { el.innerHTML = 'Jalankan versi lokal untuk mengaktifkan bot.'; return; }
+  try {
+    const s = await api('/api/bot-config');
+    el.innerHTML = `Config bot: <b>${s.hasKey ? 'private key terpasang' : 'belum ada key'}</b> · mode <b>${esc(s.mode)}</b>` +
+      (s.updatedAt ? ` · sinkron terakhir ${fmtAgo(s.updatedAt)}` : ' · belum pernah sinkron') +
+      `. Memantau <b>${watchlist.length} dev</b>. Jalankan <span class="addr">node bot.js</span> untuk mulai.`;
+  } catch { el.innerHTML = 'Server lokal tidak terjangkau.'; }
+}
+
+async function syncBotConfig() {
+  if (!isLocal) return;
+  try {
+    await api('/api/bot-config', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...botCfg,
+        tgToken: settings.tgToken, tgChat: settings.tgChat, heliusKey: settings.heliusKey,
+        watchlist: watchlist.map(w => ({ wallet: w.wallet, label: w.label })),
+      }),
+    });
+  } catch { /* server lokal mungkin mati */ }
+}
+
+$('#btn-bot-save').addEventListener('click', async () => {
+  botCfg.mode = document.querySelector('input[name="bot-mode"]:checked').value;
+  botCfg.buySol = parseFloat($('#bot-sol').value) || 0.05;
+  botCfg.slippage = parseInt($('#bot-slippage').value, 10) || 15;
+  botCfg.priorityFee = parseFloat($('#bot-priority').value) || 0.001;
+  botCfg.maxBuysPerDevPerDay = parseInt($('#bot-maxbuys').value, 10) || 1;
+  botCfg.privateKey = $('#bot-key').value.trim();
+  store.set('botcfg', botCfg);
+  const st = $('#bot-status');
+  if (botCfg.mode === 'live' && !botCfg.privateKey) {
+    st.textContent = 'Mode live butuh private key wallet burner.';
+  } else if (!isLocal) {
+    st.textContent = 'Tersimpan di browser, tapi bot hanya jalan di versi lokal.';
+  } else {
+    await syncBotConfig();
+    st.textContent = 'Tersimpan & tersinkron ke bot.';
+  }
+  refreshBotSyncInfo();
 });
 
 // ================= settings =================
