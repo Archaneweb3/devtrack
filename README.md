@@ -65,6 +65,7 @@ Bot lokal (`bot.js`) mendengar launch pump.fun **real-time** via WebSocket PumpP
 - **Mode simulasi** (default): catat + kirim sinyal Telegram, tanpa uang. **Mode live**: beli via PumpPortal Trade API (`node bot.js`, butuh `npm install @solana/web3.js bs58`).
 - Wallet burner khusus bot; private key hanya di `bot-config.json` lokal (di-gitignore), tidak pernah ke server/Vercel.
 - Pengaman: jumlah beli tetap, slippage/priority fee, maks beli per dev per hari.
+- **Pencatatan mcap masuk:** tiap sinyal mencatat market cap saat deteksi (SOL + USD) ke log & `bot-signals.csv` — buka di Excel untuk lihat rata-rata mcap masuk per dev dari data nyata.
 
 ## Catatan penting
 

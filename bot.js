@@ -11,7 +11,22 @@ const path = require('path');
 
 const CONFIG_FILE = path.join(__dirname, 'bot-config.json');
 const LOG_FILE = path.join(__dirname, 'bot-trades.log');
+const STATS_FILE = path.join(__dirname, 'bot-signals.csv');
 const WS_URL = 'wss://pumpportal.fun/api/data';
+
+// ---------- harga SOL (untuk konversi mcap ke USD), cache 5 menit ----------
+let solPrice = 0, solPriceAt = 0;
+async function getSolPrice() {
+  if (solPrice && Date.now() - solPriceAt < 5 * 60 * 1000) return solPrice;
+  try {
+    const r = await (await fetch('https://api.dexscreener.com/latest/dex/tokens/So11111111111111111111111111111111111111112')).json();
+    const stable = (r.pairs || []).find(p => ['USDC', 'USDT'].includes(p.quoteToken?.symbol));
+    if (stable) { solPrice = parseFloat(stable.priceUsd) || solPrice; solPriceAt = Date.now(); }
+  } catch { /* pakai harga terakhir */ }
+  return solPrice;
+}
+function usd(mcapSol) { return solPrice ? '$' + Math.round(mcapSol * solPrice).toLocaleString('en-US') : '—'; }
+function usdRaw(mcapSol) { return solPrice ? Math.round(mcapSol * solPrice) : ''; } // tanpa koma, aman untuk CSV
 
 function loadConfig() {
   try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); }
@@ -51,6 +66,21 @@ function log(line) {
   const msg = `[${stamp}] ${line}`;
   console.log(msg);
   try { fs.appendFileSync(LOG_FILE, msg + '\n'); } catch { /* abaikan */ }
+}
+
+// catat tiap deteksi ke CSV untuk analisis rata-rata mcap masuk per dev
+function recordStat(row) {
+  try {
+    if (!fs.existsSync(STATS_FILE)) {
+      fs.writeFileSync(STATS_FILE, 'waktu,dev,label,symbol,mint,mcap_sol,mcap_usd,mode\n');
+    }
+    const line = [
+      new Date().toISOString(), row.wallet, `"${(row.label || '').replace(/"/g, "'")}"`,
+      `"${(row.symbol || '').replace(/"/g, "'")}"`, row.mint,
+      row.mcapSol.toFixed(2), row.mcapUsdRaw, row.mode,
+    ].join(',');
+    fs.appendFileSync(STATS_FILE, line + '\n');
+  } catch { /* abaikan */ }
 }
 
 // ---------- Telegram ----------
@@ -119,13 +149,20 @@ async function onLaunch(ev) {
 
   const mode = cfg.mode || 'simulation';
   const links = `pump.fun/coin/${mint}`;
+  await getSolPrice();
+  const mcapSol = ev.marketCapSol || 0;         // mcap saat bot mendeteksi launch
+  const mcapUsd = usd(mcapSol);
+  const mcapUsdRaw = usdRaw(mcapSol);
+  const mcapStr = `${mcapSol.toFixed(1)} SOL (${mcapUsd})`;
 
   if (mode === 'simulation') {
     recordBuy(wallet);
-    log(`SINYAL BELI (simulasi) — dev ${who} launch ${name} | ${mint} | seharusnya beli ${cfg.buySol || 0.05} SOL`);
+    recordStat({ wallet, label, symbol: ev.symbol, mint, mcapSol, mcapUsdRaw, mode });
+    log(`SINYAL BELI (simulasi) — dev ${who} launch ${name} | mcap masuk ${mcapStr} | ${mint} | rencana ${cfg.buySol || 0.05} SOL`);
     await tg(`\u{1F7E1} <b>SIMULASI — SINYAL BELI</b>\n` +
       `Dev watchlist launch token!\n\n` +
       `<b>Token:</b> ${name}\n<b>CA:</b> <code>${mint}</code>\n<b>Dev:</b> <code>${wallet}</code>${label ? ` (${label})` : ''}\n` +
+      `<b>Mcap saat terdeteksi:</b> ${mcapStr}\n` +
       `<b>Rencana beli:</b> ${cfg.buySol || 0.05} SOL (tidak dieksekusi — mode simulasi)\n\n` +
       `<a href="https://${links}">pump.fun</a> · <a href="https://dexscreener.com/solana/${mint}">chart</a>`);
     return;
@@ -133,13 +170,14 @@ async function onLaunch(ev) {
 
   // ---- LIVE ----
   recordBuy(wallet);
-  log(`EKSEKUSI BELI — dev ${who} launch ${name} | ${mint} | ${cfg.buySol} SOL...`);
+  recordStat({ wallet, label, symbol: ev.symbol, mint, mcapSol, mcapUsdRaw, mode });
+  log(`EKSEKUSI BELI — dev ${who} launch ${name} | mcap masuk ${mcapStr} | ${mint} | ${cfg.buySol} SOL...`);
   try {
     const sig = await executeBuy(mint);
     log(`BERHASIL — ${name} | tx ${sig}`);
     await tg(`\u{1F7E2} <b>AUTO-BUY BERHASIL</b>\n` +
       `<b>Token:</b> ${name}\n<b>CA:</b> <code>${mint}</code>\n<b>Dev:</b> <code>${wallet}</code>${label ? ` (${label})` : ''}\n` +
-      `<b>Jumlah:</b> ${cfg.buySol} SOL\n` +
+      `<b>Mcap saat beli:</b> ${mcapStr}\n<b>Jumlah:</b> ${cfg.buySol} SOL\n` +
       `<a href="https://solscan.io/tx/${sig}">tx</a> · <a href="https://${links}">pump.fun</a> · <a href="https://dexscreener.com/solana/${mint}">chart</a>`);
   } catch (e) {
     log(`GAGAL beli ${name}: ${e.message}`);
