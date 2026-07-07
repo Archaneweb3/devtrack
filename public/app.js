@@ -161,10 +161,13 @@ function renderSettings() {
 function renderMonitorStatus() {
   const el = $('#monitor-status');
   if (!el) return;
-  el.innerHTML = tgConfigured()
-    ? `Monitor watchlist: <b>aktif selama halaman ini terbuka</b> — memeriksa ${watchlist.length} dev setiap <b>3 menit</b>.` +
-      (monitorLastRun ? ` Pemeriksaan terakhir ${fmtAgo(monitorLastRun)}.` : ' Pemeriksaan pertama sebentar lagi.')
-    : 'Monitor watchlist: <b>nonaktif</b> — isi token & chat ID dulu.';
+  const conn = monitorConnected
+    ? '<b style="color:var(--green)">tersambung real-time</b> ke stream pump.fun (delay ~1–3 detik)'
+    : '<b style="color:var(--amber)">menyambung…</b>';
+  el.innerHTML =
+    `Monitor watchlist: ${conn} — memantau <b>${watchlist.length} dev</b>.` +
+    (tgConfigured() ? ' Alert dikirim ke Telegram.' : ' <b>Isi token &amp; chat ID</b> agar alert masuk Telegram.') +
+    '<br><span style="color:var(--faint)">Catatan: browser bisa menunda alert kalau tab lama tidak aktif. Untuk real-time yang benar-benar andal (dan auto-buy), jalankan <span class="addr">node bot.js</span>.</span>';
 }
 
 // auto-save: setiap ketikan langsung tersimpan, tanpa harus klik Simpan
@@ -312,33 +315,57 @@ async function renderWatchlist(force) {
   }));
 }
 
-// ================= monitor watchlist (di browser, selama tab terbuka) =================
-let monitorLastRun = 0;
+// ================= monitor watchlist REAL-TIME (WebSocket, selama tab terbuka) =================
+let monitorLastRun = 0;      // waktu event terakhir diterima dari stream
+let monitorConnected = false;
+let monitorWs = null;
+const alertedMints = new Set(); // hindari alert dobel utk mint yang sama
 
-async function checkWatchlistLaunches() {
-  monitorLastRun = Date.now();
-  renderMonitorStatus();
-  if (!tgConfigured() || !watchlist.length) return;
-  for (const item of watchlist) {
-    try {
-      const latest = await api('/api/latest?wallet=' + item.wallet);
-      if (!latest) continue;
-      if (item.lastMint && item.lastMint !== latest.mint) {
-        await api('/api/telegram', {
+function startWatchMonitor() {
+  try {
+    monitorWs = new WebSocket('wss://pumpportal.fun/api/data');
+    monitorWs.onopen = () => {
+      monitorConnected = true;
+      monitorWs.send(JSON.stringify({ method: 'subscribeNewToken' }));
+      renderMonitorStatus();
+    };
+    monitorWs.onmessage = async e => {
+      let d; try { d = JSON.parse(e.data); } catch { return; }
+      monitorLastRun = Date.now();
+      if (!d.mint || d.txType !== 'create') return;
+      const wl = watchlist.find(w => w.wallet === d.traderPublicKey);
+      if (!wl || alertedMints.has(d.mint)) return;
+      alertedMints.add(d.mint);
+      wl.lastMint = d.mint; saveWatchlist();
+
+      // alert instan: notifikasi browser + Telegram
+      const title = `${wl.label || short(wl.wallet)} launch ${d.symbol || 'token'}`;
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('🔔 Dev watchlist launch!', { body: `${d.name || ''} (${d.symbol || ''})\n${d.mint}` });
+        }
+      } catch { /* noop */ }
+      if (tgConfigured()) {
+        api('/api/telegram', {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             type: 'watchlist', token: settings.tgToken, chatId: settings.tgChat,
-            wallet: item.wallet, label: item.label,
-            coin: { mint: latest.mint, name: latest.name, symbol: latest.symbol },
+            wallet: wl.wallet, label: wl.label,
+            coin: { mint: d.mint, name: d.name, symbol: d.symbol },
           }),
         }).catch(() => {});
       }
-      if (item.lastMint !== latest.mint) { item.lastMint = latest.mint; saveWatchlist(); }
-    } catch { /* dev berikutnya */ }
-  }
+      if ($('#tab-watchlist').classList.contains('active')) renderWatchlist(false);
+    };
+    monitorWs.onclose = () => { monitorConnected = false; renderMonitorStatus(); setTimeout(startWatchMonitor, 3000); };
+    monitorWs.onerror = () => { try { monitorWs.close(); } catch { /* noop */ } };
+  } catch { setTimeout(startWatchMonitor, 5000); }
 }
-setInterval(checkWatchlistLaunches, 3 * 60 * 1000);
-setTimeout(checkWatchlistLaunches, 15 * 1000);
+startWatchMonitor();
+// minta izin notifikasi browser sekali
+if ('Notification' in window && Notification.permission === 'default') {
+  setTimeout(() => Notification.requestPermission().catch(() => {}), 3000);
+}
 renderSettings(); // isi field pengaturan dari localStorage sejak halaman dimuat
 
 // ================= dev card / table rendering =================

@@ -21,7 +21,7 @@ Watchlist & pengaturan (token Telegram, Helius key) tersimpan di **localStorage 
 Tempel alamat wallet dev mana pun untuk melihat track record lengkapnya.
 
 ### 3. Watchlist
-Simpan dev yang menarik (tersimpan di `data.json`). Dev yang launch token baru dalam 24 jam terakhir ditandai badge "LAUNCH BARU".
+Simpan dev yang menarik (tersimpan di localStorage browser). Dev yang launch token baru dalam 24 jam terakhir ditandai badge "LAUNCH BARU". Selama tab terbuka, website memantau **real-time via WebSocket** (delay ~1–3 detik) dan mengirim alert Telegram + notifikasi browser saat dev watchlist launch. Untuk keandalan penuh (tab tidak akan ke-suspend) & auto-buy, jalankan `bot.js`.
 
 ### 4. Trace on-chain (deteksi dev gonta-ganti wallet)
 Di profil dev, tombol **"Jalankan trace"** menelusuri riwayat transaksi via RPC publik Solana:
