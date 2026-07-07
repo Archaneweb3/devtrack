@@ -65,11 +65,36 @@ let gFileId = store.get('gfileid', null);
 let driveSyncTimer = null;
 let driveStatus = '';
 
-function setDriveStatus(s) { driveStatus = s; renderGoogleArea(); }
+function setDriveStatus(s) { driveStatus = s; renderGoogleArea(); renderTopbarAuth(); }
+
+const GOOGLE_G = '<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.16-3.16A11 11 0 0 0 12 1 11 11 0 0 0 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>';
+
+function renderTopbarAuth() {
+  const el = $('#topbar-auth');
+  if (!el) return;
+  if (gUser) {
+    el.innerHTML = `<div class="auth-chip" title="Tersinkron ke Google Drive">
+      ${gUser.picture ? `<img src="${esc(gUser.picture)}" onerror="this.remove()">` : GOOGLE_G.replace('<svg', '<svg style="width:20px;height:20px;margin-left:4px"')}
+      <span class="auth-email">${esc(gUser.email || 'akun Google')}</span>
+      <button class="icon-btn" id="btn-topbar-logout" title="Keluar"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
+    </div>`;
+    $('#btn-topbar-logout').addEventListener('click', disconnectGoogle);
+  } else {
+    el.innerHTML = `<button class="btn-google" id="btn-topbar-login">${GOOGLE_G} Login dengan Google</button>`;
+    $('#btn-topbar-login').addEventListener('click', () => {
+      if (googleClientId) connectGoogle(true);
+      else {
+        document.querySelector('[data-tab="settings"]').click();
+        document.querySelector('#google-area')?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  }
+}
 
 async function initGoogle() {
   try { googleClientId = (await api('/api/config')).googleClientId; } catch { /* offline */ }
   renderGoogleArea();
+  renderTopbarAuth();
   if (googleClientId && gUser) connectGoogle(false); // coba sambung diam-diam
 }
 
@@ -90,7 +115,7 @@ function connectGoogle(interactive) {
         const ui = await (await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { authorization: 'Bearer ' + gToken.access_token },
         })).json();
-        gUser = { email: ui.email || '' };
+        gUser = { email: ui.email || '', picture: ui.picture || '' };
         store.set('guser', gUser);
       } catch { /* email opsional */ }
       setDriveStatus('Tersambung. Menyinkronkan…');
@@ -106,6 +131,7 @@ function disconnectGoogle() {
   gToken = null; gUser = null; gFileId = null;
   store.set('guser', null); store.set('gfileid', null);
   renderGoogleArea();
+  renderTopbarAuth();
 }
 
 async function driveFetch(url, opts = {}) {
