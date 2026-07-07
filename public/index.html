@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -82,6 +83,11 @@
   <!-- ============ PENGATURAN ============ -->
   <section id="tab-settings" class="tab">
     <div class="settings-grid">
+      <div class="settings-card" style="grid-column: 1 / -1">
+        <h3>Akun Google — simpan &amp; sinkronkan pengaturan</h3>
+        <p class="hint-text">Login Google menyimpan bot token, chat ID, Helius key, dan watchlist kamu ke <b>Google Drive milikmu sendiri</b> (folder tersembunyi khusus aplikasi ini) — otomatis tersinkron di semua perangkat/browser. Tanpa login, data hanya tersimpan di browser ini.</p>
+        <div id="google-area"><span class="dim">Memuat…</span></div>
+      </div>
       <div class="settings-card">
         <h3>Telegram — kirim signal</h3>
         <p class="hint-text">Signal watchlist (dev launch token baru, lengkap dengan CA) dikirim <b>otomatis selama halaman ini terbuka</b>; signal hasil scan dikirim lewat tombol "Kirim signal Telegram" setelah scan selesai. Token &amp; key tersimpan hanya di browser kamu (localStorage), tidak pernah disimpan di server.</p>

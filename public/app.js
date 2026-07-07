@@ -53,7 +53,161 @@ function tgConfigured() { return !!(settings.tgToken && settings.tgChat); }
 function heliusConfigured() { return !!settings.heliusKey; }
 function hk() { return heliusConfigured() ? '&heliusKey=' + encodeURIComponent(settings.heliusKey) : ''; }
 function watchlistWallets() { return new Set(watchlist.map(w => w.wallet)); }
-function saveWatchlist() { store.set('watchlist', watchlist); }
+function saveWatchlist() { store.set('watchlist', watchlist); scheduleDriveSync(); }
+function saveSettings() { store.set('settings', settings); scheduleDriveSync(); }
+
+// ================= Google Drive sync (appDataFolder milik user) =================
+const DRIVE_FILE = 'devtrack.json';
+let googleClientId = '';
+let gUser = store.get('guser', null);      // { email }
+let gToken = null;                          // { access_token, exp } — hanya di memori
+let gFileId = store.get('gfileid', null);
+let driveSyncTimer = null;
+let driveStatus = '';
+
+function setDriveStatus(s) { driveStatus = s; renderGoogleArea(); }
+
+async function initGoogle() {
+  try { googleClientId = (await api('/api/config')).googleClientId; } catch { /* offline */ }
+  renderGoogleArea();
+  if (googleClientId && gUser) connectGoogle(false); // coba sambung diam-diam
+}
+
+function tokenValid() { return gToken && Date.now() < gToken.exp - 60000; }
+
+function connectGoogle(interactive) {
+  if (!googleClientId || typeof google === 'undefined') return;
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: googleClientId,
+    scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email',
+    callback: async resp => {
+      if (resp.error) {
+        if (interactive) setDriveStatus('Gagal login: ' + resp.error);
+        return;
+      }
+      gToken = { access_token: resp.access_token, exp: Date.now() + (resp.expires_in || 3600) * 1000 };
+      try {
+        const ui = await (await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { authorization: 'Bearer ' + gToken.access_token },
+        })).json();
+        gUser = { email: ui.email || '' };
+        store.set('guser', gUser);
+      } catch { /* email opsional */ }
+      setDriveStatus('Tersambung. Menyinkronkan…');
+      await pullFromDrive();
+      setDriveStatus('');
+    },
+  });
+  client.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+}
+
+function disconnectGoogle() {
+  if (gToken) try { google.accounts.oauth2.revoke(gToken.access_token, () => {}); } catch { /* sudah putus */ }
+  gToken = null; gUser = null; gFileId = null;
+  store.set('guser', null); store.set('gfileid', null);
+  renderGoogleArea();
+}
+
+async function driveFetch(url, opts = {}) {
+  if (!tokenValid()) throw new Error('token kadaluarsa');
+  const res = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), authorization: 'Bearer ' + gToken.access_token } });
+  if (res.status === 401) { gToken = null; throw new Error('token ditolak'); }
+  return res;
+}
+
+async function findDriveFile() {
+  if (gFileId) return gFileId;
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27${DRIVE_FILE}%27&fields=files(id)`);
+  const body = await res.json();
+  gFileId = body.files?.[0]?.id || null;
+  if (gFileId) store.set('gfileid', gFileId);
+  return gFileId;
+}
+
+async function pullFromDrive() {
+  try {
+    const id = await findDriveFile();
+    if (!id) { await pushToDrive(); return; } // pertama kali: unggah data lokal
+    const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
+    const remote = await res.json();
+    if (remote && typeof remote === 'object') {
+      if (remote.settings) { settings = { ...settings, ...remote.settings }; store.set('settings', settings); }
+      if (Array.isArray(remote.watchlist)) { watchlist = remote.watchlist; store.set('watchlist', watchlist); }
+      if ($('#tab-settings').classList.contains('active')) renderSettings();
+      if ($('#tab-watchlist').classList.contains('active')) renderWatchlist(false);
+    }
+  } catch (e) { setDriveStatus('Sinkron gagal: ' + e.message); }
+}
+
+async function pushToDrive() {
+  if (!gUser || !tokenValid()) return;
+  const payload = JSON.stringify({ settings, watchlist, updatedAt: Date.now() });
+  try {
+    const id = await findDriveFile();
+    if (id) {
+      await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, {
+        method: 'PATCH', headers: { 'content-type': 'application/json' }, body: payload,
+      });
+    } else {
+      const boundary = 'devtrackb';
+      const body =
+        `--${boundary}\r\ncontent-type: application/json; charset=UTF-8\r\n\r\n` +
+        JSON.stringify({ name: DRIVE_FILE, parents: ['appDataFolder'] }) +
+        `\r\n--${boundary}\r\ncontent-type: application/json\r\n\r\n${payload}\r\n--${boundary}--`;
+      const res = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST', headers: { 'content-type': `multipart/related; boundary=${boundary}` }, body,
+      });
+      const created = await res.json();
+      if (created.id) { gFileId = created.id; store.set('gfileid', gFileId); }
+    }
+    setDriveStatus('');
+  } catch (e) { setDriveStatus('Sinkron gagal: ' + e.message); }
+}
+
+function scheduleDriveSync() {
+  if (!gUser) return;
+  clearTimeout(driveSyncTimer);
+  driveSyncTimer = setTimeout(() => {
+    if (tokenValid()) pushToDrive();
+    else if (googleClientId) connectGoogle(false); // refresh diam-diam, push menyusul saat pull selesai
+  }, 1500);
+}
+
+function renderGoogleArea() {
+  const el = $('#google-area');
+  if (!el) return;
+  if (!googleClientId) {
+    el.innerHTML = `
+      <p class="trace-note" style="margin-bottom:8px">Belum aktif — pemilik website perlu mengisi <span class="addr">GOOGLE_CLIENT_ID</span> dulu:</p>
+      <ol class="steps">
+        <li>Buka <b>console.cloud.google.com</b> → buat project → aktifkan <b>Google Drive API</b> (APIs &amp; Services → Library).</li>
+        <li><b>OAuth consent screen</b> → External → isi nama app → tambahkan email kamu sebagai <b>Test user</b>.</li>
+        <li><b>Credentials → Create Credentials → OAuth client ID → Web application</b> → di "Authorized JavaScript origins" tambahkan URL website ini (mis. <span class="addr">https://devtrack-xxx.vercel.app</span>) dan <span class="addr">http://localhost:3456</span>.</li>
+        <li>Salin Client ID → di Vercel: <b>Settings → Environment Variables</b> → nama <span class="addr">GOOGLE_CLIENT_ID</span> → Redeploy.</li>
+      </ol>`;
+    return;
+  }
+  if (!gUser) {
+    el.innerHTML = `<div class="settings-actions" style="margin-top:0">
+      <button class="btn btn-primary" id="btn-google-connect">Login dengan Google</button>
+      <span class="dim">${esc(driveStatus)}</span></div>`;
+    $('#btn-google-connect')?.addEventListener('click', () => connectGoogle(true));
+    return;
+  }
+  el.innerHTML = `<div class="settings-actions" style="margin-top:0">
+    <span class="tag tag-good">Tersambung: ${esc(gUser.email || 'akun Google')}</span>
+    <button class="btn btn-sm" id="btn-google-sync">Sinkron sekarang</button>
+    <button class="btn btn-sm" id="btn-google-disconnect">Putuskan</button>
+    <span class="dim">${esc(driveStatus)}</span></div>`;
+  $('#btn-google-sync')?.addEventListener('click', async () => {
+    if (!tokenValid()) { connectGoogle(true); return; }
+    setDriveStatus('Menyinkronkan…');
+    await pullFromDrive();
+    await pushToDrive();
+    setDriveStatus('Tersinkron.');
+  });
+  $('#btn-google-disconnect')?.addEventListener('click', disconnectGoogle);
+}
 
 // ================= tabs =================
 document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -73,6 +227,7 @@ function renderSettings() {
   $('#tg-chat').value = settings.tgChat;
   $('#helius-key').value = settings.heliusKey;
   renderMonitorStatus();
+  renderGoogleArea();
 }
 function renderMonitorStatus() {
   const el = $('#monitor-status');
@@ -86,7 +241,7 @@ function renderMonitorStatus() {
 $('#btn-tg-save').addEventListener('click', () => {
   settings.tgToken = $('#tg-token').value.trim();
   settings.tgChat = $('#tg-chat').value.trim();
-  store.set('settings', settings);
+  saveSettings();
   $('#tg-status').textContent = tgConfigured() ? 'Tersimpan.' : 'Tersimpan (belum lengkap).';
   renderMonitorStatus();
 });
@@ -105,7 +260,7 @@ $('#btn-tg-test').addEventListener('click', async () => {
 
 $('#btn-helius-save').addEventListener('click', () => {
   settings.heliusKey = $('#helius-key').value.trim();
-  store.set('settings', settings);
+  saveSettings();
   $('#helius-status').textContent = heliusConfigured() ? 'Tersimpan — RPC beralih ke Helius.' : 'Key dikosongkan — kembali ke RPC publik.';
 });
 
@@ -240,6 +395,7 @@ async function checkWatchlistLaunches() {
 }
 setInterval(checkWatchlistLaunches, 3 * 60 * 1000);
 setTimeout(checkWatchlistLaunches, 15 * 1000);
+window.addEventListener('load', () => setTimeout(initGoogle, 300)); // tunggu script GSI siap
 
 // ================= dev card / table rendering =================
 function primaryTag(p) {
