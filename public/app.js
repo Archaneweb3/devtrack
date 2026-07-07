@@ -84,10 +84,26 @@ function renderMonitorStatus() {
     : 'Monitor watchlist: <b>nonaktif</b> — isi token & chat ID dulu.';
 }
 
-$('#btn-tg-save').addEventListener('click', () => {
+// auto-save: setiap ketikan langsung tersimpan, tanpa harus klik Simpan
+let autoSaveTimer = null;
+function autoSaveSettings() {
   settings.tgToken = $('#tg-token').value.trim();
   settings.tgChat = $('#tg-chat').value.trim();
+  settings.heliusKey = $('#helius-key').value.trim();
   saveSettings();
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    $('#tg-status').textContent = 'Tersimpan otomatis.';
+    $('#helius-status').textContent = settings.heliusKey ? 'Tersimpan otomatis.' : '';
+    renderMonitorStatus();
+  }, 400);
+}
+['#tg-token', '#tg-chat', '#helius-key'].forEach(sel => {
+  $(sel).addEventListener('input', autoSaveSettings);
+});
+
+$('#btn-tg-save').addEventListener('click', () => {
+  autoSaveSettings();
   $('#tg-status').textContent = tgConfigured() ? 'Tersimpan.' : 'Tersimpan (belum lengkap).';
   renderMonitorStatus();
 });
@@ -105,8 +121,7 @@ $('#btn-tg-test').addEventListener('click', async () => {
 });
 
 $('#btn-helius-save').addEventListener('click', () => {
-  settings.heliusKey = $('#helius-key').value.trim();
-  saveSettings();
+  autoSaveSettings();
   $('#helius-status').textContent = heliusConfigured() ? 'Tersimpan — RPC beralih ke Helius.' : 'Key dikosongkan — kembali ke RPC publik.';
 });
 
@@ -241,6 +256,7 @@ async function checkWatchlistLaunches() {
 }
 setInterval(checkWatchlistLaunches, 3 * 60 * 1000);
 setTimeout(checkWatchlistLaunches, 15 * 1000);
+renderSettings(); // isi field pengaturan dari localStorage sejak halaman dimuat
 
 // ================= dev card / table rendering =================
 function primaryTag(p) {
