@@ -16,6 +16,7 @@ const routes = {
   enrich: require('./api/enrich'),
   latest: require('./api/latest'),
   telegram: require('./api/telegram'),
+  score: require('./api/score'),
 };
 
 // jembatan bot (khusus lokal): browser push watchlist+settings → file yang dibaca bot.js

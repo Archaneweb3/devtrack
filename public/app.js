@@ -69,6 +69,54 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
   });
 });
 
+// ================= live feed =================
+let liveCount = 0, livePro = 0, liveRows = 0;
+const scoreQueue = [];
+let scoreActive = 0;
+
+function pumpScore() {
+  if (scoreActive >= 2 || !scoreQueue.length) return;
+  const { wallet, el } = scoreQueue.shift();
+  scoreActive++;
+  api('/api/score?wallet=' + wallet).then(d => {
+    if (!el.isConnected) return;
+    const badge = el.querySelector('.badge-chk');
+    if (!badge) return;
+    if (d.pro) {
+      badge.className = 'badge-pro'; badge.textContent = '★ PRO';
+      el.classList.add('pro');
+      livePro++; $('#live-pro').textContent = livePro;
+    } else {
+      badge.textContent = d.total > 0 ? `${d.graduated}/${d.total} grad` : 'new wallet';
+    }
+  }).catch(() => {}).finally(() => { scoreActive--; pumpScore(); });
+}
+
+function renderLiveRow(d) {
+  const feed = $('#feed');
+  if (!feed) return;
+  const empty = $('#feed-empty');
+  if (empty) empty.remove();
+  const wallet = d.traderPublicKey, mint = d.mint;
+  if (!wallet || !mint) return;
+  liveCount++; $('#live-count').textContent = liveCount;
+
+  const row = document.createElement('div');
+  row.className = 'feed-row row-click';
+  row.dataset.wallet = wallet;
+  row.innerHTML =
+    (d.image ? `<img class="av" src="${esc(d.image)}" onerror="this.style.visibility='hidden'">` : '<div class="av"></div>') +
+    `<div class="meta"><div class="nm">${esc(d.name || '?')} <span class="tk">$${esc((d.symbol || '').toUpperCase())}</span></div>` +
+    `<div class="sub">dev <span class="w">${short(wallet)}</span> · just now</div></div>` +
+    `<span class="badge-chk">checking…</span>` +
+    `<span class="go">${ICON.ext}</span>`;
+  row.addEventListener('click', () => openDrawer(wallet));
+  feed.prepend(row);
+  liveRows++;
+  scoreQueue.push({ wallet, el: row }); pumpScore();
+  while (liveRows > 30) { feed.lastElementChild.remove(); liveRows--; }
+}
+
 // ================= auto-buy bot =================
 let botCfg = store.get('botcfg', {
   mode: 'simulation', buySol: 0.05, slippage: 15, priorityFee: 0.001, maxBuysPerDevPerDay: 1, privateKey: '',
@@ -328,11 +376,13 @@ function startWatchMonitor() {
       monitorConnected = true;
       monitorWs.send(JSON.stringify({ method: 'subscribeNewToken' }));
       renderMonitorStatus();
+      const lc = $('#live-conn'); if (lc) lc.textContent = 'real-time';
     };
     monitorWs.onmessage = async e => {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       monitorLastRun = Date.now();
       if (!d.mint || d.txType !== 'create') return;
+      renderLiveRow(d); // live feed: tampilkan SEMUA launch
       const wl = watchlist.find(w => w.wallet === d.traderPublicKey);
       if (!wl || alertedMints.has(d.mint)) return;
       alertedMints.add(d.mint);
@@ -357,7 +407,7 @@ function startWatchMonitor() {
       }
       if ($('#tab-watchlist').classList.contains('active')) renderWatchlist(false);
     };
-    monitorWs.onclose = () => { monitorConnected = false; renderMonitorStatus(); setTimeout(startWatchMonitor, 3000); };
+    monitorWs.onclose = () => { monitorConnected = false; renderMonitorStatus(); const lc = $('#live-conn'); if (lc) lc.textContent = 'reconnecting…'; setTimeout(startWatchMonitor, 3000); };
     monitorWs.onerror = () => { try { monitorWs.close(); } catch { /* noop */ } };
   } catch { setTimeout(startWatchMonitor, 5000); }
 }

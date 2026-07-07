@@ -15,6 +15,7 @@
   <div class="brand">devtrack<span class="brand-tag">SOL</span></div>
   <nav class="nav">
     <button class="nav-btn active" data-tab="scan">Scanner</button>
+    <button class="nav-btn" data-tab="live">Live</button>
     <button class="nav-btn" data-tab="watchlist">Watchlist</button>
     <button class="nav-btn" data-tab="bot">Auto-buy</button>
     <button class="nav-btn" data-tab="settings">Pengaturan</button>
@@ -77,6 +78,22 @@
           <tr><td colspan="9" class="empty-cell">Jalankan scan untuk menemukan dev berdasarkan track record on-chain: tingkat graduate, ATH tertinggi, konsistensi, dan deteksi serial rugger.</td></tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- ============ LIVE FEED ============ -->
+  <section id="tab-live" class="tab">
+    <div class="live-head">
+      <h2>Live Launches</h2>
+      <span class="live-badge"><span class="dot"></span> <span id="live-conn">connecting…</span></span>
+      <span class="live-sub">Every new pump.fun token, streaming live. A <b class="pro-word">PRO</b> badge means the dev has a proven track record. Click any row to analyze the dev.</span>
+    </div>
+    <div class="live-stats">
+      <span>Launches this session <b id="live-count">0</b></span>
+      <span>PRO devs <b id="live-pro">0</b></span>
+    </div>
+    <div class="feed" id="feed">
+      <div class="feed-empty" id="feed-empty">Connecting to pump.fun stream…</div>
     </div>
   </section>
 
