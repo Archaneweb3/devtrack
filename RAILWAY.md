@@ -1,62 +1,62 @@
-# Menjalankan bot 24/7 di Railway
+# Running the bot 24/7 on Railway
 
-Bot (`bot.js`) butuh proses yang hidup terus. Vercel tidak bisa (serverless), tapi **Railway** bisa. Ini gratis sampai kuota bulanan tertentu, cukup untuk 1 bot.
+The bot (`bot.js`) needs a process that stays alive continuously. Vercel can't do this (serverless), but **Railway** can. It's free up to a certain monthly quota, enough for 1 bot.
 
-## Langkah deploy
+## Deploy steps
 
-1. Buka **railway.app** → login dengan GitHub.
-2. **New Project → Deploy from GitHub repo** → pilih repo `devtrack`.
-3. Railway otomatis baca `railway.json` dan menjalankan `node bot.js`. Biarkan build selesai.
-4. Buka tab **Variables**, tambahkan environment variables berikut:
+1. Open **railway.app** → log in with GitHub.
+2. **New Project → Deploy from GitHub repo** → pick the `devtrack` repo.
+3. Railway automatically reads `railway.json` and runs `node bot.js`. Let the build finish.
+4. Open the **Variables** tab and add the following environment variables:
 
-### Wajib
-| Variable | Contoh | Keterangan |
+### Required
+| Variable | Example | Description |
 |---|---|---|
-| `BOT_WATCHLIST` | `wallet1,wallet2` | Daftar wallet dev, dipisah koma. (Atau JSON: `[{"wallet":"...","label":"ANSEM"}]`) |
-| `BOT_MODE` | `simulation` | `simulation` (aman, tanpa uang) atau `live` |
+| `BOT_WATCHLIST` | `wallet1,wallet2` | List of dev wallets, comma-separated. (Or JSON: `[{"wallet":"...","label":"ANSEM"}]`) |
+| `BOT_MODE` | `simulation` | `simulation` (safe, no money) or `live` |
 
-### Untuk alert Telegram
-| Variable | Keterangan |
+### For Telegram alerts
+| Variable | Description |
 |---|---|
-| `TG_TOKEN` | Bot token dari @BotFather |
-| `TG_CHAT` | Chat ID dari @userinfobot |
+| `TG_TOKEN` | Bot token from @BotFather |
+| `TG_CHAT` | Chat ID from @userinfobot |
 
-### Parameter beli/jual (opsional, ada default)
-| Variable | Default | Keterangan |
+### Buy/sell parameters (optional, have defaults)
+| Variable | Default | Description |
 |---|---|---|
-| `BOT_BUY_SOL` | `0.05` | SOL per beli |
+| `BOT_BUY_SOL` | `0.05` | SOL per buy |
 | `BOT_SLIPPAGE` | `15` | Slippage % |
 | `BOT_PRIORITY_FEE` | `0.001` | Priority fee SOL |
-| `BOT_MAX_BUYS_PER_DAY` | `1` | Maks beli per dev/hari |
-| `BOT_TAKE_PROFIT` | `[{"mult":2,"pct":50}]` | JSON aturan take-profit |
-| `BOT_STOP_LOSS` | `{"mult":0,"pct":0}` | JSON stop-loss (0 = mati) |
+| `BOT_MAX_BUYS_PER_DAY` | `1` | Max buys per dev/day |
+| `BOT_TAKE_PROFIT` | `[{"mult":2,"pct":50}]` | JSON take-profit rules |
+| `BOT_STOP_LOSS` | `{"mult":0,"pct":0}` | JSON stop-loss (0 = off) |
 
-### Untuk mode LIVE (beli sungguhan)
-| Variable | Keterangan |
+### For LIVE mode (real buys)
+| Variable | Description |
 |---|---|
-| `PRIVATE_KEY` | Private key base58 wallet **burner** (bukan wallet utama!) |
-| `HELIUS_KEY` | Helius API key (gratis) untuk pengiriman transaksi andal |
+| `PRIVATE_KEY` | Base58 private key of a **burner** wallet (not your main wallet!) |
+| `HELIUS_KEY` | Helius API key (free) for reliable transaction submission |
 
-5. Setelah variables tersimpan, Railway otomatis redeploy. Buka tab **Deploy Logs** — harusnya muncul:
+5. Once the variables are saved, Railway automatically redeploys. Open the **Deploy Logs** tab — you should see:
    ```
-   devtrack bot start. Watchlist: N dev. Sumber config: env.
-   Tersambung ke stream pump.fun. Mode: SIMULATION | pantau N dev ...
+   devtrack bot started. Watchlist: N devs. Config source: env.
+   Connected to the pump.fun stream. Mode: SIMULATION | watching N devs ...
    ```
-6. Bot sekarang jalan 24/7. Alert masuk Telegram walau komputermu mati.
+6. The bot now runs 24/7. Alerts land in Telegram even when your computer is off.
 
-## Cek status
+## Check status
 
-Railway memberi URL publik (tab Settings → Networking → Generate Domain). Buka URL itu → muncul status JSON:
+Railway gives you a public URL (Settings tab → Networking → Generate Domain). Open that URL → a JSON status appears:
 ```json
 { "status": "running", "mode": "simulation", "watching": 2, "wsConnected": true, "lastEventAgoSec": 1 }
 ```
 
-## Mengubah watchlist
+## Changing the watchlist
 
-Edit variable `BOT_WATCHLIST` di Railway → simpan → bot otomatis redeploy. (Watchlist di website Vercel terpisah — itu localStorage browser; Railway pakai env var.)
+Edit the `BOT_WATCHLIST` variable on Railway → save → the bot redeploys automatically. (The watchlist on the Vercel website is separate — that's browser localStorage; Railway uses env vars.)
 
-## Catatan mode LIVE
+## Notes on LIVE mode
 
-- Mulai `simulation` dulu beberapa hari. Baru ganti `BOT_MODE=live` + isi `PRIVATE_KEY` setelah yakin.
-- `PRIVATE_KEY` di Railway env var terenkripsi & tidak masuk kode/GitHub, tapi tetap: **pakai wallet burner berisi dana kecil.**
-- Railway free tier punya batas jam-eksekusi bulanan; pantau agar tidak habis di tengah bulan.
+- Start with `simulation` for a few days first. Only switch to `BOT_MODE=live` + fill in `PRIVATE_KEY` once you're confident.
+- `PRIVATE_KEY` in a Railway env var is encrypted and doesn't go into the code/GitHub, but still: **use a burner wallet holding a small amount of funds.**
+- Railway's free tier has a monthly execution-hour limit; monitor it so it doesn't run out mid-month.

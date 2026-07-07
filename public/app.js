@@ -146,13 +146,13 @@ function renderBot() {
 
 async function refreshBotSyncInfo() {
   const el = $('#bot-sync-info');
-  if (!isLocal) { el.innerHTML = 'Jalankan versi lokal untuk mengaktifkan bot.'; return; }
+  if (!isLocal) { el.innerHTML = 'Run the local version to enable the bot.'; return; }
   try {
     const s = await api('/api/bot-config');
-    el.innerHTML = `Config bot: <b>${s.hasKey ? 'private key terpasang' : 'belum ada key'}</b> · mode <b>${esc(s.mode)}</b>` +
-      (s.updatedAt ? ` · sinkron terakhir ${fmtAgo(s.updatedAt)}` : ' · belum pernah sinkron') +
-      `. Memantau <b>${watchlist.length} dev</b>. Jalankan <span class="addr">node bot.js</span> untuk mulai.`;
-  } catch { el.innerHTML = 'Server lokal tidak terjangkau.'; }
+    el.innerHTML = `Bot config: <b>${s.hasKey ? 'private key set' : 'no key yet'}</b> · mode <b>${esc(s.mode)}</b>` +
+      (s.updatedAt ? ` · last synced ${fmtAgo(s.updatedAt)}` : ' · never synced') +
+      `. Watching <b>${watchlist.length} devs</b>. Run <span class="addr">node bot.js</span> to start.`;
+  } catch { el.innerHTML = 'Local server unreachable.'; }
 }
 
 async function syncBotConfig() {
@@ -178,7 +178,7 @@ $('#btn-bot-save').addEventListener('click', async () => {
   botCfg.priorityFee = parseFloat($('#bot-priority').value) || 0.001;
   botCfg.maxBuysPerDevPerDay = parseInt($('#bot-maxbuys').value, 10) || 1;
   botCfg.privateKey = $('#bot-key').value.trim();
-  // aturan jual
+  // sell rules
   const tp = [];
   const t1m = parseFloat($('#tp1-mult').value), t1p = parseFloat($('#tp1-pct').value);
   const t2m = parseFloat($('#tp2-mult').value), t2p = parseFloat($('#tp2-pct').value);
@@ -189,12 +189,12 @@ $('#btn-bot-save').addEventListener('click', async () => {
   store.set('botcfg', botCfg);
   const st = $('#bot-status');
   if (botCfg.mode === 'live' && !botCfg.privateKey) {
-    st.textContent = 'Mode live butuh private key wallet burner.';
+    st.textContent = 'Live mode needs a burner wallet private key.';
   } else if (!isLocal) {
-    st.textContent = 'Tersimpan di browser, tapi bot hanya jalan di versi lokal.';
+    st.textContent = 'Saved in browser, but the bot only runs in the local version.';
   } else {
     await syncBotConfig();
-    st.textContent = 'Tersimpan & tersinkron ke bot.';
+    st.textContent = 'Saved & synced to bot.';
   }
   refreshBotSyncInfo();
 });
@@ -210,15 +210,15 @@ function renderMonitorStatus() {
   const el = $('#monitor-status');
   if (!el) return;
   const conn = monitorConnected
-    ? '<b style="color:var(--green)">tersambung real-time</b> ke stream pump.fun (delay ~1–3 detik)'
-    : '<b style="color:var(--amber)">menyambung…</b>';
+    ? '<b style="color:var(--green)">connected real-time</b> to the pump.fun stream (~1–3s delay)'
+    : '<b style="color:var(--amber)">connecting…</b>';
   el.innerHTML =
-    `Monitor watchlist: ${conn} — memantau <b>${watchlist.length} dev</b>.` +
-    (tgConfigured() ? ' Alert dikirim ke Telegram.' : ' <b>Isi token &amp; chat ID</b> agar alert masuk Telegram.') +
-    '<br><span style="color:var(--faint)">Catatan: browser bisa menunda alert kalau tab lama tidak aktif. Untuk real-time yang benar-benar andal (dan auto-buy), jalankan <span class="addr">node bot.js</span>.</span>';
+    `Watchlist monitor: ${conn} — watching <b>${watchlist.length} devs</b>.` +
+    (tgConfigured() ? ' Alerts sent to Telegram.' : ' <b>Enter your token &amp; chat ID</b> to get Telegram alerts.') +
+    '<br><span style="color:var(--faint)">Note: the browser may delay alerts if the tab is inactive for a while. For truly reliable real-time (and auto-buy), run <span class="addr">node bot.js</span>.</span>';
 }
 
-// auto-save: setiap ketikan langsung tersimpan, tanpa harus klik Simpan
+// auto-save: every keystroke saves immediately, no need to click Save
 let autoSaveTimer = null;
 function autoSaveSettings() {
   settings.tgToken = $('#tg-token').value.trim();
@@ -227,8 +227,8 @@ function autoSaveSettings() {
   saveSettings();
   clearTimeout(autoSaveTimer);
   autoSaveTimer = setTimeout(() => {
-    $('#tg-status').textContent = 'Tersimpan otomatis.';
-    $('#helius-status').textContent = settings.heliusKey ? 'Tersimpan otomatis.' : '';
+    $('#tg-status').textContent = 'Auto-saved.';
+    $('#helius-status').textContent = settings.heliusKey ? 'Auto-saved.' : '';
     renderMonitorStatus();
   }, 400);
 }
@@ -238,44 +238,44 @@ function autoSaveSettings() {
 
 $('#btn-tg-save').addEventListener('click', () => {
   autoSaveSettings();
-  $('#tg-status').textContent = tgConfigured() ? 'Tersimpan.' : 'Tersimpan (belum lengkap).';
+  $('#tg-status').textContent = tgConfigured() ? 'Saved.' : 'Saved (incomplete).';
   renderMonitorStatus();
 });
 
 $('#btn-tg-test').addEventListener('click', async () => {
   const st = $('#tg-status');
-  st.textContent = 'Mengirim tes…';
+  st.textContent = 'Sending test…';
   try {
     await api('/api/telegram', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ type: 'test', token: $('#tg-token').value.trim(), chatId: $('#tg-chat').value.trim() }),
     });
-    st.textContent = 'Pesan tes terkirim — cek Telegram kamu.';
-  } catch (e) { st.textContent = 'Gagal: ' + e.message; }
+    st.textContent = 'Test message sent — check your Telegram.';
+  } catch (e) { st.textContent = 'Failed: ' + e.message; }
 });
 
 $('#btn-helius-save').addEventListener('click', () => {
   autoSaveSettings();
-  $('#helius-status').textContent = heliusConfigured() ? 'Tersimpan — RPC beralih ke Helius.' : 'Key dikosongkan — kembali ke RPC publik.';
+  $('#helius-status').textContent = heliusConfigured() ? 'Saved — RPC switched to Helius.' : 'Key cleared — back to public RPC.';
 });
 
 $('#btn-helius-test').addEventListener('click', async () => {
   const st = $('#helius-status');
   const key = $('#helius-key').value.trim();
-  if (!key) { st.textContent = 'Isi key dulu.'; return; }
-  st.textContent = 'Menguji koneksi…';
+  if (!key) { st.textContent = 'Enter a key first.'; return; }
+  st.textContent = 'Testing connection…';
   try {
     const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${encodeURIComponent(key)}`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getVersion', params: [] }),
     });
     const body = await res.json();
-    if (body.error) throw new Error(body.error.message || 'key ditolak');
-    st.textContent = `Terhubung (solana-core ${body.result?.['solana-core'] || 'ok'}).`;
-  } catch (e) { st.textContent = 'Gagal: ' + e.message; }
+    if (body.error) throw new Error(body.error.message || 'key rejected');
+    st.textContent = `Connected (solana-core ${body.result?.['solana-core'] || 'ok'}).`;
+  } catch (e) { st.textContent = 'Failed: ' + e.message; }
 });
 
-// ================= global search (CA token ATAU wallet dev) =================
+// ================= global search (token CA OR dev wallet) =================
 $('#global-search').addEventListener('keydown', async e => {
   if (e.key !== 'Enter') return;
   const input = e.target;
@@ -285,7 +285,7 @@ $('#global-search').addEventListener('keydown', async e => {
   const drawerBody = $('#drawer-body');
   drawer.classList.add('open');
   overlay.classList.remove('hidden');
-  drawerBody.innerHTML = '<div class="loading-note">Mengenali alamat… (CA token atau wallet dev)</div>';
+  drawerBody.innerHTML = '<div class="loading-note">Resolving address… (token CA or dev wallet)</div>';
   try {
     const r = await api('/api/resolve?address=' + encodeURIComponent(q) + hk());
     input.value = '';
@@ -301,11 +301,11 @@ $('#global-search').addEventListener('keydown', async e => {
 async function addToWatchlist(wallet, label) {
   if (!watchlist.find(w => w.wallet === wallet)) {
     const item = { wallet, label: label || '', addedAt: Date.now(), lastMint: null };
-    try { item.lastMint = (await api('/api/latest?wallet=' + wallet))?.mint || null; } catch { /* set saat monitor */ }
+    try { item.lastMint = (await api('/api/latest?wallet=' + wallet))?.mint || null; } catch { /* set on monitor */ }
     watchlist.push(item);
     saveWatchlist();
   }
-  document.querySelectorAll(`.btn-watch[data-wallet="${wallet}"]`).forEach(b => { b.innerHTML = ICON.check; b.disabled = true; b.title = 'Sudah dipantau'; });
+  document.querySelectorAll(`.btn-watch[data-wallet="${wallet}"]`).forEach(b => { b.innerHTML = ICON.check; b.disabled = true; b.title = 'Already watching'; });
 }
 
 $('#btn-wl-add').addEventListener('click', async () => {
@@ -320,7 +320,7 @@ $('#btn-wl-refresh').addEventListener('click', () => renderWatchlist(true));
 async function renderWatchlist(force) {
   const body = $('#wl-body');
   if (!watchlist.length) {
-    body.innerHTML = '<tr><td colspan="8" class="empty-cell">Watchlist kosong. Tambahkan wallet dari scanner atau manual.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" class="empty-cell">Watchlist is empty. Add wallets from the scanner or manually.</td></tr>';
     return;
   }
   body.innerHTML = watchlist.map(item => `
@@ -330,7 +330,7 @@ async function renderWatchlist(force) {
       <td colspan="5"><span class="skel" style="width:180px"></span></td>
       <td></td>
     </tr>`).join('');
-  $('#wl-status').textContent = 'Memuat…';
+  $('#wl-status').textContent = 'Loading…';
 
   const rows = [];
   for (const item of watchlist) {
@@ -339,17 +339,17 @@ async function renderWatchlist(force) {
       const isNew = p.lastLaunchTs && Date.now() - p.lastLaunchTs < DAY;
       rows.push(`
       <tr class="row-click" data-wallet="${p.wallet}">
-        <td><span class="addr">${short(p.wallet)}</span>${p.username ? `<span class="addr-user">${esc(p.username)}</span>` : ''}${isNew ? '<span class="badge-new">LAUNCH BARU</span>' : ''}</td>
+        <td><span class="addr">${short(p.wallet)}</span>${p.username ? `<span class="addr-user">${esc(p.username)}</span>` : ''}${isNew ? '<span class="badge-new">NEW LAUNCH</span>' : ''}</td>
         <td class="dim">${esc(item.label) || '—'}</td>
         <td>${scoreCell(p)}</td>
         <td class="num">${p.totalLaunches}${p.truncated ? '+' : ''}</td>
         <td class="num">${p.graduated} <span class="dim">(${Math.round(p.gradRate * 100)}%)</span></td>
         <td class="num">${fmtUsd(p.bestAthUsd)}</td>
         <td class="dim">${fmtAgo(p.lastLaunchTs)}</td>
-        <td class="col-act"><button class="icon-btn btn-wl-del" data-wallet="${p.wallet}" title="Hapus">${ICON.trash}</button></td>
+        <td class="col-act"><button class="icon-btn btn-wl-del" data-wallet="${p.wallet}" title="Remove">${ICON.trash}</button></td>
       </tr>`);
     } catch (e) {
-      rows.push(`<tr><td colspan="8" class="dim">${short(item.wallet)} — gagal: ${esc(e.message)}</td></tr>`);
+      rows.push(`<tr><td colspan="8" class="dim">${short(item.wallet)} — failed: ${esc(e.message)}</td></tr>`);
     }
     body.innerHTML = rows.join('');
   }
@@ -363,11 +363,11 @@ async function renderWatchlist(force) {
   }));
 }
 
-// ================= monitor watchlist REAL-TIME (WebSocket, selama tab terbuka) =================
-let monitorLastRun = 0;      // waktu event terakhir diterima dari stream
+// ================= REAL-TIME watchlist monitor (WebSocket, while tab is open) =================
+let monitorLastRun = 0;      // time of the last event received from the stream
 let monitorConnected = false;
 let monitorWs = null;
-const alertedMints = new Set(); // hindari alert dobel utk mint yang sama
+const alertedMints = new Set(); // avoid duplicate alerts for the same mint
 
 function startWatchMonitor() {
   try {
@@ -382,14 +382,14 @@ function startWatchMonitor() {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       monitorLastRun = Date.now();
       if (!d.mint || d.txType !== 'create') return;
-      renderLiveRow(d); // live feed: tampilkan SEMUA launch
+      renderLiveRow(d); // live feed: show ALL launches
       const wl = watchlist.find(w => w.wallet === d.traderPublicKey);
       if (!wl || alertedMints.has(d.mint)) return;
       alertedMints.add(d.mint);
       wl.lastMint = d.mint; saveWatchlist();
 
-      // alert instan: notifikasi browser + Telegram
-      const title = `${wl.label || short(wl.wallet)} launch ${d.symbol || 'token'}`;
+      // instant alert: browser notification + Telegram
+      const title = `${wl.label || short(wl.wallet)} launched ${d.symbol || 'token'}`;
       try {
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('🔔 Dev watchlist launch!', { body: `${d.name || ''} (${d.symbol || ''})\n${d.mint}` });
@@ -412,11 +412,11 @@ function startWatchMonitor() {
   } catch { setTimeout(startWatchMonitor, 5000); }
 }
 startWatchMonitor();
-// minta izin notifikasi browser sekali
+// ask for browser notification permission once
 if ('Notification' in window && Notification.permission === 'default') {
   setTimeout(() => Notification.requestPermission().catch(() => {}), 3000);
 }
-renderSettings(); // isi field pengaturan dari localStorage sejak halaman dimuat
+renderSettings(); // populate settings fields from localStorage on page load
 
 // ================= dev card / table rendering =================
 function primaryTag(p) {
@@ -454,8 +454,8 @@ $('#btn-scan').addEventListener('click', async () => {
   $('#scan-progress').classList.remove('hidden');
   $('#scan-bar').style.width = '0%';
   const deep = mode === 'graduated24';
-  $('#scan-status').textContent = deep ? 'Mengambil semua token graduate 24 jam terakhir… (bisa 1–2 menit)' : 'Mengambil daftar token…';
-  $('#scan-body').innerHTML = '<tr><td colspan="9" class="empty-cell">Mengambil token dari pump.fun…</td></tr>';
+  $('#scan-status').textContent = deep ? 'Fetching all tokens graduated in the last 24h… (may take 1–2 min)' : 'Fetching token list…';
+  $('#scan-body').innerHTML = '<tr><td colspan="9" class="empty-cell">Fetching tokens from pump.fun…</td></tr>';
 
   try {
     const coins = await api(`/api/coins?mode=${mode}&limit=${limit}`);
@@ -478,18 +478,18 @@ $('#btn-scan').addEventListener('click', async () => {
           scanProfiles.push(p);
         } catch { /* skip */ }
         done++;
-        $('#scan-status').textContent = `${done}/${total} dev dianalisis`;
+        $('#scan-status').textContent = `${done}/${total} devs analyzed`;
         $('#scan-bar').style.width = Math.round(done / total * 100) + '%';
         renderScanTable();
       }
     }
     await Promise.all(Array.from({ length: 3 }, worker));
-    $('#scan-status').textContent = (scanAbort ? 'Dihentikan — ' : 'Selesai — ') + `${scanProfiles.length} dev dianalisis`;
+    $('#scan-status').textContent = (scanAbort ? 'Stopped — ' : 'Done — ') + `${scanProfiles.length} devs analyzed`;
     $('#scan-bar').style.width = '100%';
-    if (!scanProfiles.length) $('#scan-body').innerHTML = '<tr><td colspan="9" class="empty-cell">Tidak ada dev yang berhasil dianalisis.</td></tr>';
+    if (!scanProfiles.length) $('#scan-body').innerHTML = '<tr><td colspan="9" class="empty-cell">No devs could be analyzed.</td></tr>';
     if (tgConfigured() && scanProfiles.filter(scanFilter).length) $('#btn-send-signal').classList.remove('hidden');
   } catch (e) {
-    $('#scan-body').innerHTML = `<tr><td colspan="9" class="empty-cell">Scan gagal: ${esc(e.message)}</td></tr>`;
+    $('#scan-body').innerHTML = `<tr><td colspan="9" class="empty-cell">Scan failed: ${esc(e.message)}</td></tr>`;
     $('#scan-status').textContent = '';
   } finally {
     btn.disabled = false;
@@ -502,13 +502,13 @@ $('#f-launch').addEventListener('input', () => { if (scanProfiles.length) render
 $('#f-winrate').addEventListener('input', () => { if (scanProfiles.length) renderScanTable(); });
 
 const MODE_LABELS = {
-  graduated: 'Baru graduate', graduated24: 'Semua graduate 24 jam',
-  new: 'Token terbaru', top: 'Top market cap',
+  graduated: 'Recently graduated', graduated24: 'All graduated in 24h',
+  new: 'Newest tokens', top: 'Top market cap',
 };
 $('#btn-send-signal').addEventListener('click', async function () {
   const passed = scanProfiles.filter(scanFilter).sort((a, b) => (b.gradRate - a.gradRate) || (b.score - a.score));
   if (!passed.length) return;
-  this.disabled = true; this.textContent = 'Mengirim…';
+  this.disabled = true; this.textContent = 'Sending…';
   try {
     const r = await api('/api/telegram', {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -523,11 +523,11 @@ $('#btn-send-signal').addEventListener('click', async function () {
         })),
       }),
     });
-    this.textContent = `Terkirim (${r.sent} dev)`;
-    setTimeout(() => { this.textContent = 'Kirim signal Telegram'; this.disabled = false; }, 3000);
+    this.textContent = `Sent (${r.sent} devs)`;
+    setTimeout(() => { this.textContent = 'Send Telegram signal'; this.disabled = false; }, 3000);
   } catch (e) {
-    this.textContent = 'Gagal: ' + e.message;
-    setTimeout(() => { this.textContent = 'Kirim signal Telegram'; this.disabled = false; }, 4000);
+    this.textContent = 'Failed: ' + e.message;
+    setTimeout(() => { this.textContent = 'Send Telegram signal'; this.disabled = false; }, 4000);
   }
 });
 
@@ -535,10 +535,10 @@ function renderScanTable() {
   const passed = scanProfiles.filter(scanFilter);
   const sorted = [...passed].sort((a, b) => (b.gradRate - a.gradRate) || (b.score - a.score));
   $('#scan-filtered').textContent = scanProfiles.length
-    ? `${passed.length} dari ${scanProfiles.length} dev lolos filter`
+    ? `${passed.length} of ${scanProfiles.length} devs passed the filter`
     : '';
   if (!sorted.length && scanProfiles.length) {
-    $('#scan-body').innerHTML = '<tr><td colspan="9" class="empty-cell">Belum ada dev yang lolos filter — turunkan "Min launch" / "Min winrate", atau tunggu scan menemukan lebih banyak dev.</td></tr>';
+    $('#scan-body').innerHTML = '<tr><td colspan="9" class="empty-cell">No devs passed the filter yet — lower "Min launches" / "Min winrate", or wait for the scan to find more devs.</td></tr>';
     return;
   }
   const inWlSet = watchlistWallets();
@@ -555,7 +555,7 @@ function renderScanTable() {
       <td class="dim">${fmtAgo(p.lastLaunchTs)}</td>
       <td>${primaryTag(p)}</td>
       <td class="col-act">
-        <button class="icon-btn btn-watch" data-wallet="${p.wallet}" title="${inWl ? 'Sudah dipantau' : 'Tambah ke watchlist'}" ${inWl ? 'disabled' : ''}>${inWl ? ICON.check : ICON.star}</button>
+        <button class="icon-btn btn-watch" data-wallet="${p.wallet}" title="${inWl ? 'Already watching' : 'Add to watchlist'}" ${inWl ? 'disabled' : ''}>${inWl ? ICON.check : ICON.star}</button>
       </td>
     </tr>`;
   }).join('');
@@ -582,7 +582,7 @@ async function openDrawer(wallet, viaCoin) {
   drawer.classList.add('open');
   overlay.classList.remove('hidden');
   const body = $('#drawer-body');
-  body.innerHTML = '<div class="loading-note">Memuat track record…</div>';
+  body.innerHTML = '<div class="loading-note">Loading track record…</div>';
   try {
     const p = await api('/api/dev?wallet=' + encodeURIComponent(wallet));
     renderProfile(p, viaCoin);
@@ -609,53 +609,53 @@ function renderProfile(p, viaCoin) {
     </tr>`).join('');
 
   $('#drawer-body').innerHTML = `
-    ${viaCoin ? `<div class="dw-via"><span class="tag tag-info">Dev di balik token ${esc(viaCoin.name)} ${viaCoin.symbol ? `(${esc(viaCoin.symbol)})` : ''}</span></div>` : ''}
+    ${viaCoin ? `<div class="dw-via"><span class="tag tag-info">Dev behind token ${esc(viaCoin.name)} ${viaCoin.symbol ? `(${esc(viaCoin.symbol)})` : ''}</span></div>` : ''}
     <div class="dw-addr-row">
       <span class="dw-addr">${p.wallet}</span>
-      <button class="icon-btn" id="btn-copy" title="Salin alamat">${ICON.copy}</button>
+      <button class="icon-btn" id="btn-copy" title="Copy address">${ICON.copy}</button>
       ${p.username ? `<span class="addr-user">${esc(p.username)}</span>` : ''}
     </div>
     <div class="dw-links">
       <a href="https://solscan.io/account/${p.wallet}" target="_blank">Solscan ${ICON.ext}</a>
       <a href="https://pump.fun/profile/${p.wallet}" target="_blank">pump.fun ${ICON.ext}</a>
       <a href="https://gmgn.ai/sol/address/${p.wallet}" target="_blank">GMGN ${ICON.ext}</a>
-      <button class="btn btn-sm btn-watch" data-wallet="${p.wallet}" ${inWl ? 'disabled' : ''} style="margin-left:auto">${inWl ? 'Dipantau' : 'Tambah ke watchlist'}</button>
+      <button class="btn btn-sm btn-watch" data-wallet="${p.wallet}" ${inWl ? 'disabled' : ''} style="margin-left:auto">${inWl ? 'Watching' : 'Add to watchlist'}</button>
     </div>
 
     <div class="stat-grid">
-      <div class="stat"><span>Skor</span><b class="${gradeCls(p.grade)}">${p.score} <small style="font-size:.7rem">/ 100</small></b></div>
-      <div class="stat"><span>Launch</span><b>${p.totalLaunches}${p.truncated ? '+' : ''}</b></div>
-      <div class="stat"><span>Graduate</span><b>${p.graduated} <small style="font-size:.7rem;color:var(--muted)">(${Math.round(p.gradRate * 100)}%)</small></b></div>
-      <div class="stat"><span>ATH terbaik</span><b>${fmtUsd(p.bestAthUsd)}</b></div>
-      <div class="stat"><span>MCap live terbesar</span><b>${fmtUsd(p.bestLiveUsd)}</b></div>
-      <div class="stat"><span>Launch terakhir</span><b>${fmtAgo(p.lastLaunchTs)}</b></div>
+      <div class="stat"><span>Score</span><b class="${gradeCls(p.grade)}">${p.score} <small style="font-size:.7rem">/ 100</small></b></div>
+      <div class="stat"><span>Launches</span><b>${p.totalLaunches}${p.truncated ? '+' : ''}</b></div>
+      <div class="stat"><span>Graduated</span><b>${p.graduated} <small style="font-size:.7rem;color:var(--muted)">(${Math.round(p.gradRate * 100)}%)</small></b></div>
+      <div class="stat"><span>Best ATH</span><b>${fmtUsd(p.bestAthUsd)}</b></div>
+      <div class="stat"><span>Largest live mcap</span><b>${fmtUsd(p.bestLiveUsd)}</b></div>
+      <div class="stat"><span>Last launch</span><b>${fmtAgo(p.lastLaunchTs)}</b></div>
     </div>
     ${flags ? `<div class="flag-list">${flags}</div>` : ''}
 
-    <div class="section-title">Trace on-chain — arah dana &amp; wallet terkait</div>
+    <div class="section-title">On-chain trace — fund flow &amp; related wallets</div>
     <div class="trace-box" id="trace-box">
-      <p class="trace-note">Menelusuri riwayat transaksi via RPC Solana: siapa yang mendanai wallet ini, ke mana SOL dikirim, dan apakah wallet-wallet terkait itu juga pernah membuat token (deteksi dev gonta-ganti wallet).</p>
-      <button class="btn btn-sm" id="btn-trace" data-wallet="${p.wallet}">Jalankan trace</button>
+      <p class="trace-note">Traces transaction history via Solana RPC: who funded this wallet, where the SOL went, and whether those related wallets have also created tokens (dev wallet-rotation detection).</p>
+      <button class="btn btn-sm" id="btn-trace" data-wallet="${p.wallet}">Run trace</button>
     </div>
 
-    <div class="section-title">Deploy lintas launchpad — Meteora dll</div>
+    <div class="section-title">Cross-launchpad deploys — Meteora, etc.</div>
     <div class="trace-box" id="deploy-box">
       ${heliusConfigured()
-        ? `<p class="trace-note">Scan 500 transaksi terakhir wallet ini via Helius untuk menemukan SEMUA token yang pernah dia deploy — pump.fun, Meteora DBC, atau launchpad lain.</p>
-           <button class="btn btn-sm" id="btn-deploys" data-wallet="${p.wallet}">Scan deploy lintas launchpad</button>`
-        : '<p class="trace-note">Butuh Helius API key (gratis, daftar di dashboard.helius.dev) — isi di tab Pengaturan untuk mengaktifkan fitur ini.</p>'}
+        ? `<p class="trace-note">Scan this wallet's last 500 transactions via Helius to find EVERY token it has ever deployed — pump.fun, Meteora DBC, or any other launchpad.</p>
+           <button class="btn btn-sm" id="btn-deploys" data-wallet="${p.wallet}">Scan cross-launchpad deploys</button>`
+        : '<p class="trace-note">Requires a Helius API key (free, sign up at dashboard.helius.dev) — add it in the Settings tab to enable this feature.</p>'}
     </div>
 
-    <div class="section-title">Riwayat token pump.fun (${p.totalLaunches}${p.truncated ? '+, 150 terbaru' : ''})</div>
+    <div class="section-title">pump.fun token history (${p.totalLaunches}${p.truncated ? '+, latest 150' : ''})</div>
     <div class="tbl-scroll">
       <table class="coin-table">
-        <thead><tr><th>Token</th><th>Umur</th><th>Status</th><th class="num">MCap</th><th class="num">ATH</th><th class="num">Liq</th><th class="num">Vol 24j</th><th></th></tr></thead>
-        <tbody>${coinRows || '<tr><td colspan="8" class="dim">Belum pernah membuat token di pump.fun.</td></tr>'}</tbody>
+        <thead><tr><th>Token</th><th>Age</th><th>Status</th><th class="num">MCap</th><th class="num">ATH</th><th class="num">Liq</th><th class="num">Vol 24h</th><th></th></tr></thead>
+        <tbody>${coinRows || '<tr><td colspan="8" class="dim">Has never created a token on pump.fun.</td></tr>'}</tbody>
       </table>
     </div>`;
 
   $('#btn-copy').addEventListener('click', () => navigator.clipboard.writeText(p.wallet).catch(() => {}));
-  $('#drawer-body').querySelector('.btn-watch')?.addEventListener('click', function () { addToWatchlist(p.wallet).then(() => { this.textContent = 'Dipantau'; this.disabled = true; }).catch(() => {}); });
+  $('#drawer-body').querySelector('.btn-watch')?.addEventListener('click', function () { addToWatchlist(p.wallet).then(() => { this.textContent = 'Watching'; this.disabled = true; }).catch(() => {}); });
   $('#btn-trace').addEventListener('click', () => runTrace(p.wallet));
   $('#btn-deploys')?.addEventListener('click', () => runDeployScan(p.wallet));
   loadEnrichment(p.coins.map(c => c.mint).slice(0, 60));
@@ -685,17 +685,17 @@ async function loadEnrichment(mints) {
 
 // ---- on-chain trace ----
 function creatorChip(c) {
-  if (!c || c.error) return '<span class="tag tag-plain">cek gagal</span>';
-  if (!c.isCreator) return '<span class="tag tag-plain">bukan creator</span>';
+  if (!c || c.error) return '<span class="tag tag-plain">check failed</span>';
+  if (!c.isCreator) return '<span class="tag tag-plain">not a creator</span>';
   const risky = c.launches >= 8 && c.graduated / c.launches < 0.05;
   const cls = risky ? 'tag-bad' : c.graduated > 0 ? 'tag-good' : 'tag-warn';
-  return `<span class="tag ${cls}">creator: ${c.launches}${c.truncated ? '+' : ''} token, ${c.graduated} graduate${c.bestAthUsd >= 50000 ? ', ATH ' + fmtUsd(c.bestAthUsd) : ''}</span>`;
+  return `<span class="tag ${cls}">creator: ${c.launches}${c.truncated ? '+' : ''} tokens, ${c.graduated} graduated${c.bestAthUsd >= 50000 ? ', ATH ' + fmtUsd(c.bestAthUsd) : ''}</span>`;
 }
 
 function flowItem(f) {
   return `
   <div class="flow-item">
-    <span class="addr" data-open="${f.address}" title="Buka profil dev">${short(f.address)}</span>
+    <span class="addr" data-open="${f.address}" title="Open dev profile">${short(f.address)}</span>
     <a href="https://solscan.io/account/${f.address}" target="_blank" title="Solscan">${ICON.ext}</a>
     ${f.creator ? creatorChip(f.creator) : ''}
     <span class="flow-amt">${fmtSol(f.sol)} SOL${f.txns > 1 ? ` · ${f.txns} tx` : ''}</span>
@@ -704,53 +704,53 @@ function flowItem(f) {
 
 async function runTrace(wallet) {
   const box = $('#trace-box');
-  box.innerHTML = '<div class="loading-note">Menelusuri on-chain… mengambil riwayat transaksi &amp; memeriksa wallet terkait (±10–20 detik)</div>';
+  box.innerHTML = '<div class="loading-note">Tracing on-chain… fetching transaction history &amp; checking related wallets (~10–20s)</div>';
   try {
     const t = await api('/api/cluster?wallet=' + wallet + hk());
     if (!t.txCount) {
-      box.innerHTML = '<p class="trace-note">Wallet ini belum punya riwayat transaksi on-chain.</p>';
+      box.innerHTML = '<p class="trace-note">This wallet has no on-chain transaction history yet.</p>';
       return;
     }
     const ageDays = t.firstSeen ? Math.max(1, Math.round((Date.now() - t.firstSeen) / DAY)) : null;
     let html = `
       <div class="trace-stats">
-        <span>Saldo <b>${fmtSol(t.solBalance)} SOL</b></span>
-        <span>Transaksi <b>${t.txCount}${t.historyTruncated ? '+' : ''}</b></span>
-        ${ageDays ? `<span>Umur wallet <b>${ageDays} hari</b></span>` : ''}
-        <span class="dim" style="font-size:.72rem">${t.parsedTxs} tx dianalisis (${t.historyTruncated ? 'riwayat panjang, sampel awal & akhir' : 'awal & akhir riwayat'})</span>
+        <span>Balance <b>${fmtSol(t.solBalance)} SOL</b></span>
+        <span>Transactions <b>${t.txCount}${t.historyTruncated ? '+' : ''}</b></span>
+        ${ageDays ? `<span>Wallet age <b>${ageDays} days</b></span>` : ''}
+        <span class="dim" style="font-size:.72rem">${t.parsedTxs} tx analyzed (${t.historyTruncated ? 'long history, first & last sample' : 'start & end of history'})</span>
       </div>`;
 
     if (t.funding) {
-      html += `<div class="flow-group"><div class="flow-label">Didanai oleh (funding pertama)</div>${flowItem(t.funding)}</div>`;
+      html += `<div class="flow-group"><div class="flow-label">Funded by (first funding)</div>${flowItem(t.funding)}</div>`;
     } else {
-      html += '<div class="flow-group"><div class="flow-label">Didanai oleh</div><p class="trace-note">Tidak ditemukan transfer SOL masuk pada sampel transaksi yang dianalisis.</p></div>';
+      html += '<div class="flow-group"><div class="flow-label">Funded by</div><p class="trace-note">No incoming SOL transfer found in the analyzed transaction sample.</p></div>';
     }
     if (t.outflows.length) {
-      html += `<div class="flow-group"><div class="flow-label">Dana keluar ke</div>${t.outflows.map(flowItem).join('')}</div>`;
+      html += `<div class="flow-group"><div class="flow-label">Funds out to</div>${t.outflows.map(flowItem).join('')}</div>`;
     } else {
-      html += '<div class="flow-group"><div class="flow-label">Dana keluar</div><p class="trace-note">Tidak ada transfer SOL keluar pada sampel transaksi terbaru.</p></div>';
+      html += '<div class="flow-group"><div class="flow-label">Funds out</div><p class="trace-note">No outgoing SOL transfer in the most recent transaction sample.</p></div>';
     }
     if (t.inflows.length) {
-      html += `<div class="flow-group"><div class="flow-label">Pemasukan lain</div>${t.inflows.map(flowItem).join('')}</div>`;
+      html += `<div class="flow-group"><div class="flow-label">Other inflows</div>${t.inflows.map(flowItem).join('')}</div>`;
     }
-    html += '<p class="trace-note" style="margin-top:10px;margin-bottom:0">Klik alamat untuk membuka profil dev wallet tersebut — berguna untuk mengikuti jejak dev yang berpindah wallet.</p>';
+    html += '<p class="trace-note" style="margin-top:10px;margin-bottom:0">Click an address to open the profile of that dev wallet — useful for following the trail of a dev who rotates wallets.</p>';
     box.innerHTML = html;
     box.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => openDrawer(el.dataset.open)));
   } catch (e) {
-    box.innerHTML = `<div class="error-box">Trace gagal: ${esc(e.message)}. RPC publik kadang penuh — coba lagi beberapa detik.</div>
-      <button class="btn btn-sm" id="btn-trace" data-wallet="${wallet}">Coba lagi</button>`;
+    box.innerHTML = `<div class="error-box">Trace failed: ${esc(e.message)}. Public RPC is sometimes overloaded — try again in a few seconds.</div>
+      <button class="btn btn-sm" id="btn-trace" data-wallet="${wallet}">Try again</button>`;
     $('#btn-trace').addEventListener('click', () => runTrace(wallet));
   }
 }
 
-// ---- scan deploy lintas launchpad (Helius) ----
+// ---- cross-launchpad deploy scan (Helius) ----
 async function runDeployScan(wallet) {
   const box = $('#deploy-box');
-  box.innerHTML = '<div class="loading-note">Memindai 500 transaksi terakhir via Helius… (±20–60 detik)</div>';
+  box.innerHTML = '<div class="loading-note">Scanning the last 500 transactions via Helius… (~20–60s)</div>';
   try {
     const r = await api('/api/deploys?wallet=' + wallet + hk());
     if (!r.total) {
-      box.innerHTML = `<p class="trace-note">Tidak ada deploy token ditemukan di ${r.txScanned} transaksi terakhir wallet ini${r.historyTruncated ? ' (riwayat lebih lama tidak dipindai)' : ''}.</p>`;
+      box.innerHTML = `<p class="trace-note">No token deploys found in this wallet's last ${r.txScanned} transactions${r.historyTruncated ? ' (older history not scanned)' : ''}.</p>`;
       return;
     }
     const rows = r.deploys.map(d => `
@@ -765,17 +765,17 @@ async function runDeployScan(wallet) {
       </tr>`).join('');
     box.innerHTML = `
       <div class="trace-stats">
-        <span>Deploy ditemukan <b>${r.total}</b></span>
-        <span>Masih hidup <b>${r.alive}</b> <span class="dim">(FDV ≥ $50K / liq ≥ $10K)</span></span>
-        <span class="dim" style="font-size:.72rem">${r.txScanned} tx dipindai${r.historyTruncated ? ' — riwayat lebih lama tidak tercakup' : ''}</span>
+        <span>Deploys found <b>${r.total}</b></span>
+        <span>Still alive <b>${r.alive}</b> <span class="dim">(FDV ≥ $50K / liq ≥ $10K)</span></span>
+        <span class="dim" style="font-size:.72rem">${r.txScanned} tx scanned${r.historyTruncated ? ' — older history not covered' : ''}</span>
       </div>
       <div class="tbl-scroll"><table class="coin-table">
-        <thead><tr><th>Token</th><th>Launchpad</th><th>Umur</th><th class="num">FDV</th><th class="num">Liq</th><th class="num">Vol 24j</th><th></th></tr></thead>
+        <thead><tr><th>Token</th><th>Launchpad</th><th>Age</th><th class="num">FDV</th><th class="num">Liq</th><th class="num">Vol 24h</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`;
   } catch (e) {
     box.innerHTML = `<div class="error-box">${esc(e.message)}</div>
-      <button class="btn btn-sm" id="btn-deploys" data-wallet="${wallet}">Coba lagi</button>`;
+      <button class="btn btn-sm" id="btn-deploys" data-wallet="${wallet}">Try again</button>`;
     $('#btn-deploys').addEventListener('click', () => runDeployScan(wallet));
   }
 }

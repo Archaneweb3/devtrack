@@ -1,74 +1,74 @@
 # devtrack — Solana Memecoin Dev Wallet Tracker
 
-Temukan dan pantau **wallet developer memecoin yang potensial** di Solana: track record, winrate graduate, trace arah dana on-chain, dan signal Telegram. Memakai API gratis (pump.fun, Dexscreener, RPC publik; opsional Helius).
+Find and monitor **promising memecoin developer wallets** on Solana: track record, graduate winrate, on-chain fund-flow tracing, and Telegram signals. Uses free APIs (pump.fun, Dexscreener, public RPC; optionally Helius).
 
-## Cara menjalankan
+## How to run
 
-**Lokal:** klik dua kali `JALANKAN.bat`, atau `npm start`, lalu buka http://localhost:3456
+**Local:** double-click `RUN.bat`, or run `npm start`, then open http://localhost:3456
 
-**Vercel:** import repo ini di [vercel.com/new](https://vercel.com/new) — zero config (static `public/` + serverless `api/`), langsung deploy.
+**Vercel:** import this repo at [vercel.com/new](https://vercel.com/new) — zero config (static `public/` + serverless `api/`), deploys instantly.
 
-Watchlist & pengaturan (token Telegram, Helius key) tersimpan di **localStorage browser** — tidak ada database, tidak ada kredensial di server.
+Watchlist & settings (Telegram token, Helius key) are stored in **browser localStorage** — no database, no credentials on the server.
 
-## Fitur
+## Features
 
-### 1. Scan Dev Potensial
-- Mengambil token terbaru (atau top market cap) dari pump.fun.
-- Menelusuri wallet **creator** setiap token, lalu mengambil seluruh riwayat token yang pernah dibuat wallet itu.
-- Memberi **skor 0–100** dan grade A–D, diurutkan dari yang terbaik.
+### 1. Scan Promising Devs
+- Fetches the latest tokens (or top market cap) from pump.fun.
+- Traces the **creator** wallet of each token, then pulls the full history of every token that wallet has created.
+- Assigns a **score of 0–100** and a grade A–D, sorted best first.
 
-### 2. Cek Wallet
-Tempel alamat wallet dev mana pun untuk melihat track record lengkapnya.
+### 2. Check Wallet
+Paste any dev wallet address to see its full track record.
 
 ### 3. Watchlist
-Simpan dev yang menarik (tersimpan di localStorage browser). Dev yang launch token baru dalam 24 jam terakhir ditandai badge "LAUNCH BARU". Selama tab terbuka, website memantau **real-time via WebSocket** (delay ~1–3 detik) dan mengirim alert Telegram + notifikasi browser saat dev watchlist launch. Untuk keandalan penuh (tab tidak akan ke-suspend) & auto-buy, jalankan `bot.js`.
+Save interesting devs (stored in browser localStorage). Devs who launched a new token in the last 24 hours are flagged with a "NEW LAUNCH" badge. While the tab is open, the site monitors **in real time via WebSocket** (~1–3 second delay) and sends a Telegram alert + browser notification whenever a watchlist dev launches. For full reliability (the tab won't get suspended) & auto-buy, run `bot.js`.
 
-### 4. Trace on-chain (deteksi dev gonta-ganti wallet)
-Di profil dev, tombol **"Jalankan trace"** menelusuri riwayat transaksi via RPC publik Solana:
-- **Didanai oleh siapa** — transfer SOL masuk paling awal (funding wallet).
-- **Dana keluar ke mana** — agregasi transfer SOL keluar terbesar.
-- Setiap wallet terkait **otomatis dicek apakah juga creator token** di pump.fun (jumlah launch, graduate, ATH) — kalau dev pindah wallet, jejaknya kelihatan di sini.
-- Klik alamat mana pun untuk membuka profilnya dan lanjutkan penelusuran hop demi hop.
+### 4. On-chain trace (detect devs switching wallets)
+On a dev profile, the **"Run trace"** button walks the transaction history via public Solana RPC:
+- **Who funded them** — the earliest incoming SOL transfers (funding wallet).
+- **Where funds went** — aggregation of the largest outgoing SOL transfers.
+- Every related wallet is **automatically checked for whether it's also a token creator** on pump.fun (launch count, graduates, ATH) — if a dev moved wallets, the trail shows up here.
+- Click any address to open its profile and continue tracing hop by hop.
 
-### 5. Data pasar (Dexscreener)
-Tabel token di profil dev diperkaya likuiditas, volume 24 jam, dan perubahan harga.
+### 5. Market data (Dexscreener)
+The token table on a dev profile is enriched with liquidity, 24-hour volume, and price change.
 
-### 6. Scan penuh 24 jam
-Mode **"Semua graduate 24 jam"** memindai SELURUH token yang graduate dalam 24 jam terakhir (paging otomatis, biasanya 400–600 token / 300+ dev). Dev serial dengan winrate tinggi tidak akan lolos dari jendela scan. Analisisnya butuh beberapa menit karena rate limit API gratis.
+### 6. Full 24-hour scan
+The **"All graduates 24h"** mode scans EVERY token that graduated in the last 24 hours (automatic paging, typically 400–600 tokens / 300+ devs). Serial devs with high winrate won't slip past the scan window. The analysis takes a few minutes due to free-API rate limits.
 
-### 7. Signal Telegram
-Konfigurasi di tab **Pengaturan** (bot token dari @BotFather + chat ID). Dua jenis signal, formatnya dibedakan:
-- **Signal watchlist (otomatis)** — browser memeriksa setiap dev watchlist tiap 3 menit **selama halaman terbuka**; begitu ada launch baru, terkirim pesan berisi nama token, **CA siap copy**, track record dev, dan link pump.fun/dexscreener.
-- **Signal scan (manual)** — setelah scan selesai, tombol "Kirim signal Telegram" mengirim maksimal 10 dev teratas yang lolos filter, beserta skor, winrate, dan ATH.
+### 7. Telegram Signals
+Configure it in the **Settings** tab (bot token from @BotFather + chat ID). Two types of signals, with distinct formats:
+- **Watchlist signal (automatic)** — the browser checks every watchlist dev every 3 minutes **while the page is open**; as soon as there's a new launch, a message is sent with the token name, **copy-ready CA**, the dev's track record, and pump.fun/dexscreener links.
+- **Scan signal (manual)** — after a scan finishes, the "Send Telegram signal" button sends up to the top 10 devs that pass the filter, along with score, winrate, and ATH.
 
-## Cara skor dihitung
+## How the score is calculated
 
-| Komponen | Bobot |
+| Component | Weight |
 |---|---|
-| Tingkat graduate ke DEX (Raydium/PumpSwap) | maks 40 |
-| ATH market cap tertinggi yang pernah dicapai | maks 30 |
-| Pengalaman (jumlah launch, maks 5 dihitung) | maks 10 |
-| Aktivitas terkini (launch terakhir) | maks 10 |
-| Konsistensi (persen token yang dapat traksi > $30k) | maks 10 |
-| 🚩 Serial launcher (≥8 token, <5% graduate) | −25 |
-| 🚩 Spam launch (>20 token) | −10 |
+| Graduation rate to DEX (Raydium/PumpSwap) | max 40 |
+| Highest ATH market cap ever reached | max 30 |
+| Experience (launch count, up to 5 counted) | max 10 |
+| Recent activity (last launch) | max 10 |
+| Consistency (percent of tokens that got traction > $30k) | max 10 |
+| 🚩 Serial launcher (≥8 tokens, <5% graduate) | −25 |
+| 🚩 Spam launch (>20 tokens) | −10 |
 
 Grade: **A** ≥70 · **B** ≥50 · **C** ≥30 · **D** <30
 
-### 8. Lintas launchpad (Meteora dll)
-- **Tanpa key (gratis):** paste CA non-pump.fun → app mendeteksi mint on-chain dan mencari **wallet deployer**-nya via RPC (transaksi pertama sang mint), lalu membuka profilnya (trace tetap jalan; riwayat pump.fun-nya kosong kalau dia memang bukan dev pump.fun). Token yang riwayatnya sangat panjang butuh Helius.
-- **Dengan Helius API key (daftar gratis di dashboard.helius.dev, isi di Pengaturan):** RPC beralih ke Helius (trace lebih cepat & dalam), CA seaktif apa pun bisa dilacak, dan di profil dev muncul tombol **"Scan deploy lintas launchpad"** — memindai 500 transaksi terakhir wallet untuk menemukan semua token yang pernah dia deploy (pump.fun, Meteora DBC, launchpad lain), lengkap dengan FDV/likuiditas/volume dan hitungan berapa yang masih hidup.
+### 8. Cross-launchpad (Meteora etc.)
+- **Without a key (free):** paste a non-pump.fun CA → the app detects the mint on-chain and finds its **deployer wallet** via RPC (the mint's first transaction), then opens its profile (trace still works; its pump.fun history will be empty if they aren't actually a pump.fun dev). Tokens with very long histories need Helius.
+- **With a Helius API key (sign up free at dashboard.helius.dev, enter it in Settings):** RPC switches to Helius (faster, deeper tracing), any CA can be traced no matter how active, and the dev profile gains a **"Scan cross-launchpad deploys"** button — it scans the wallet's last 500 transactions to find every token they've ever deployed (pump.fun, Meteora DBC, other launchpads), complete with FDV/liquidity/volume and a count of how many are still alive.
 
-### 9. Auto-buy bot (lokal saja)
-Bot lokal (`bot.js`) mendengar launch pump.fun **real-time** via WebSocket PumpPortal (delay ~1–3 detik) dan bertindak saat creator-nya ada di watchlist.
-- Atur di tab **Auto-buy** di website lokal → "Simpan & sinkron ke bot" (menulis `bot-config.json`) → jalankan `node bot.js`.
-- **Mode simulasi** (default): catat + kirim sinyal Telegram, tanpa uang. **Mode live**: beli via PumpPortal Trade API (`node bot.js`, butuh `npm install @solana/web3.js bs58`).
-- Wallet burner khusus bot; private key hanya di `bot-config.json` lokal (di-gitignore), tidak pernah ke server/Vercel.
-- Pengaman: jumlah beli tetap, slippage/priority fee, maks beli per dev per hari.
-- **Pencatatan mcap masuk:** tiap sinyal mencatat market cap saat deteksi (SOL + USD) ke log & `bot-signals.csv` — buka di Excel untuk lihat rata-rata mcap masuk per dev dari data nyata.
+### 9. Auto-buy bot (local only)
+The local bot (`bot.js`) listens for pump.fun launches **in real time** via the PumpPortal WebSocket (~1–3 second delay) and acts when the creator is on the watchlist.
+- Set it up in the **Auto-buy** tab on the local website → "Save & sync to bot" (writes `bot-config.json`) → run `node bot.js`.
+- **Simulation mode** (default): logs + sends Telegram signals, no money. **Live mode**: buys via the PumpPortal Trade API (`node bot.js`, requires `npm install @solana/web3.js bs58`).
+- A dedicated burner wallet for the bot; the private key lives only in the local `bot-config.json` (gitignored), never reaching the server/Vercel.
+- Safeguards: fixed buy amount, slippage/priority fee, max buys per dev per day.
+- **Entry mcap logging:** each signal records the market cap at detection (SOL + USD) to the log & `bot-signals.csv` — open it in Excel to see the average entry mcap per dev from real data.
 
-## Catatan penting
+## Important notes
 
-- Data hanya mencakup token yang dibuat lewat **pump.fun** (mayoritas memecoin Solana). Dev bisa saja memakai banyak wallet — skor tinggi bukan jaminan aman.
-- API gratis punya rate limit; server sudah membatasi 3 request paralel. Kalau scan besar terasa lambat, itu normal.
-- **Ini alat riset, bukan saran finansial.** Memecoin sangat berisiko.
+- Data only covers tokens created through **pump.fun** (the majority of Solana memecoins). A dev may use many wallets — a high score is not a guarantee of safety.
+- Free APIs have rate limits; the server already caps at 3 parallel requests. If a large scan feels slow, that's normal.
+- **This is a research tool, not financial advice.** Memecoins are extremely risky.

@@ -9,6 +9,6 @@
   "tgChat": "",
   "heliusKey": "",
   "watchlist": [
-    { "wallet": "CONTOH_alamat_wallet_dev", "label": "opsional" }
+    { "wallet": "EXAMPLE_dev_wallet_address", "label": "optional" }
   ]
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%235b8cff'/%3E%3Ctext x='50' y='72' font-size='60' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,11 +19,11 @@
     <button class="nav-btn" data-tab="live">Live</button>
     <button class="nav-btn" data-tab="watchlist">Watchlist</button>
     <button class="nav-btn" data-tab="bot">Auto-buy</button>
-    <button class="nav-btn" data-tab="settings">Pengaturan</button>
+    <button class="nav-btn" data-tab="settings">Settings</button>
   </nav>
   <div class="search-box">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    <input id="global-search" type="text" placeholder="Tempel CA token atau wallet dev, lalu Enter" spellcheck="false">
+    <input id="global-search" type="text" placeholder="Paste a token CA or dev wallet, then Enter" spellcheck="false">
     <span class="search-hint">CA / WALLET</span>
   </div>
 </header>
@@ -32,29 +33,29 @@
   <section id="tab-scan" class="tab active">
     <div class="toolbar">
       <select id="scan-mode">
-        <option value="graduated" selected>Baru graduate — dev winrate tinggi</option>
-        <option value="graduated24">Semua graduate 24 jam (scan penuh)</option>
-        <option value="new">Token terbaru</option>
+        <option value="graduated" selected>Recently graduated — high-winrate devs</option>
+        <option value="graduated24">All graduated in 24h (full scan)</option>
+        <option value="new">Newest tokens</option>
         <option value="top">Top market cap</option>
       </select>
       <select id="scan-limit">
-        <option value="48">48 token</option>
-        <option value="96" selected>96 token</option>
-        <option value="150">150 token</option>
-        <option value="300">300 token</option>
+        <option value="48">48 tokens</option>
+        <option value="96" selected>96 tokens</option>
+        <option value="150">150 tokens</option>
+        <option value="300">300 tokens</option>
       </select>
-      <label class="filter-field" title="Hanya tampilkan dev dengan jumlah launch minimal ini">
-        <span>Min launch</span>
+      <label class="filter-field" title="Only show devs with at least this many launches">
+        <span>Min launches</span>
         <input id="f-launch" type="number" min="1" value="3">
       </label>
-      <label class="filter-field" title="Hanya tampilkan dev dengan graduation rate minimal ini">
+      <label class="filter-field" title="Only show devs with at least this graduation rate">
         <span>Min winrate</span>
         <input id="f-winrate" type="number" min="0" max="100" value="50">
         <span class="unit">%</span>
       </label>
-      <button id="btn-scan" class="btn btn-primary">Mulai scan</button>
+      <button id="btn-scan" class="btn btn-primary">Start scan</button>
       <button id="btn-stop" class="btn hidden">Stop</button>
-      <button id="btn-send-signal" class="btn hidden">Kirim signal Telegram</button>
+      <button id="btn-send-signal" class="btn hidden">Send Telegram signal</button>
       <div class="toolbar-status"><span id="scan-filtered"></span> <span id="scan-status"></span></div>
     </div>
     <div class="progress-track hidden" id="scan-progress"><div id="scan-bar"></div></div>
@@ -65,17 +66,17 @@
           <tr>
             <th class="col-rank">#</th>
             <th>Dev</th>
-            <th class="col-score">Skor</th>
-            <th class="num">Launch</th>
-            <th class="num">Graduate</th>
-            <th class="num">ATH terbaik</th>
-            <th>Launch terakhir</th>
-            <th>Sinyal</th>
+            <th class="col-score">Score</th>
+            <th class="num">Launches</th>
+            <th class="num">Graduated</th>
+            <th class="num">Best ATH</th>
+            <th>Last launch</th>
+            <th>Signal</th>
             <th class="col-act"></th>
           </tr>
         </thead>
         <tbody id="scan-body">
-          <tr><td colspan="9" class="empty-cell">Jalankan scan untuk menemukan dev berdasarkan track record on-chain: tingkat graduate, ATH tertinggi, konsistensi, dan deteksi serial rugger.</td></tr>
+          <tr><td colspan="9" class="empty-cell">Run a scan to find devs by on-chain track record: graduation rate, highest ATH, consistency, and serial-rugger detection.</td></tr>
         </tbody>
       </table>
     </div>
@@ -101,108 +102,108 @@
   <section id="tab-bot" class="tab">
     <div class="settings-grid">
       <div class="settings-card" style="grid-column: 1 / -1">
-        <h3>Auto-buy bot — beli otomatis saat dev watchlist launch</h3>
-        <p class="hint-text">Bot lokal mendengar launch pump.fun <b>real-time</b> (WebSocket, delay ~1–3 detik) dan bertindak saat creator-nya ada di watchlist kamu. Atur di sini, lalu jalankan <span class="addr">node bot.js</span> di folder ini. Bot berjalan di komputermu — private key tidak pernah menyentuh website.</p>
-        <div id="bot-local-warn" class="error-box hidden">Panel ini hanya berfungsi saat website dibuka <b>secara lokal</b> (localhost). Auto-buy tidak bisa jalan di versi Vercel karena butuh private key di mesinmu.</div>
+        <h3>Auto-buy bot — buy automatically when a watchlist dev launches</h3>
+        <p class="hint-text">A local bot listens to pump.fun launches in <b>real time</b> (WebSocket, ~1–3s delay) and acts when the creator is on your watchlist. Configure it here, then run <span class="addr">node bot.js</span> in this folder. The bot runs on your machine — your private key never touches the website.</p>
+        <div id="bot-local-warn" class="error-box hidden">This panel only works when the website is opened <b>locally</b> (localhost). Auto-buy can't run on the Vercel version because it needs a private key on your machine.</div>
       </div>
 
       <div class="settings-card">
-        <h3>Parameter beli</h3>
+        <h3>Buy parameters</h3>
         <div class="bot-mode">
-          <label class="radio"><input type="radio" name="bot-mode" value="simulation" checked> <span><b>Simulasi</b> — catat &amp; kirim sinyal Telegram, tanpa uang</span></label>
-          <label class="radio"><input type="radio" name="bot-mode" value="live"> <span><b>Live</b> — beli sungguhan pakai wallet burner</span></label>
+          <label class="radio"><input type="radio" name="bot-mode" value="simulation" checked> <span><b>Simulation</b> — log &amp; send Telegram signals, no money</span></label>
+          <label class="radio"><input type="radio" name="bot-mode" value="live"> <span><b>Live</b> — real buys using a burner wallet</span></label>
         </div>
-        <label class="field"><span>Jumlah beli per token (SOL)</span><input id="bot-sol" type="number" step="0.01" min="0.01" value="0.05"></label>
-        <label class="field"><span>Slippage maksimal (%)</span><input id="bot-slippage" type="number" min="1" max="100" value="15"></label>
+        <label class="field"><span>Buy amount per token (SOL)</span><input id="bot-sol" type="number" step="0.01" min="0.01" value="0.05"></label>
+        <label class="field"><span>Max slippage (%)</span><input id="bot-slippage" type="number" min="1" max="100" value="15"></label>
         <label class="field"><span>Priority fee (SOL)</span><input id="bot-priority" type="number" step="0.0001" min="0" value="0.001"></label>
-        <label class="field"><span>Maks beli per dev per hari</span><input id="bot-maxbuys" type="number" min="1" value="1"></label>
+        <label class="field"><span>Max buys per dev per day</span><input id="bot-maxbuys" type="number" min="1" value="1"></label>
       </div>
 
       <div class="settings-card">
-        <h3>Auto-sell — amankan modal &amp; ambil profit</h3>
-        <p class="hint-text">Bot memantau harga token yang dibeli secara real-time dan menjual otomatis saat mencapai target. Contoh: jual 50% di 2x = balik modal, sisanya jalan gratis.</p>
+        <h3>Auto-sell — secure your capital &amp; take profit</h3>
+        <p class="hint-text">The bot watches the price of tokens it bought in real time and sells automatically when a target is hit. Example: sell 50% at 2x = capital back, the rest rides for free.</p>
         <div class="tp-row">
           <span class="tp-label">Take-profit 1</span>
-          jual <input id="tp1-pct" type="number" min="1" max="100" value="50">% di
+          sell <input id="tp1-pct" type="number" min="1" max="100" value="50">% at
           <input id="tp1-mult" type="number" min="1.1" step="0.1" value="2">x
         </div>
         <div class="tp-row">
           <span class="tp-label">Take-profit 2</span>
-          jual <input id="tp2-pct" type="number" min="0" max="100" value="25">% di
-          <input id="tp2-mult" type="number" min="0" step="0.5" value="5">x <span class="dim">(0 = nonaktif)</span>
+          sell <input id="tp2-pct" type="number" min="0" max="100" value="25">% at
+          <input id="tp2-mult" type="number" min="0" step="0.5" value="5">x <span class="dim">(0 = off)</span>
         </div>
         <div class="tp-row">
           <span class="tp-label">Stop-loss</span>
-          jual <input id="sl-pct" type="number" min="0" max="100" value="0">% di
-          <input id="sl-mult" type="number" min="0" max="1" step="0.05" value="0">x <span class="dim">(0 = nonaktif)</span>
+          sell <input id="sl-pct" type="number" min="0" max="100" value="0">% at
+          <input id="sl-mult" type="number" min="0" max="1" step="0.05" value="0">x <span class="dim">(0 = off)</span>
         </div>
-        <p class="hint-text" style="margin:10px 0 0">Take-profit berlaku di simulasi maupun live — di simulasi kamu dapat sinyal jual tanpa eksekusi, jadi bisa uji strateginya dulu.</p>
+        <p class="hint-text" style="margin:10px 0 0">Take-profit applies in both simulation and live — in simulation you get sell signals without execution, so you can test the strategy first.</p>
       </div>
 
       <div class="settings-card">
-        <h3 id="bot-key-title">Wallet burner (hanya untuk mode Live)</h3>
-        <p class="hint-text">Pakai wallet <b>khusus bot</b> berisi dana kecil — <b>bukan</b> wallet utamamu. Private key format base58 (ekspor dari Phantom: Settings → Export Private Key). Tersimpan hanya di <span class="addr">bot-config.json</span> di komputermu, tidak pernah dikirim ke server mana pun.</p>
-        <label class="field"><span>Private key (base58)</span><input id="bot-key" type="password" placeholder="hanya diperlukan untuk mode live" spellcheck="false"></label>
+        <h3 id="bot-key-title">Burner wallet (Live mode only)</h3>
+        <p class="hint-text">Use a <b>dedicated bot wallet</b> with a small amount — <b>not</b> your main wallet. Private key in base58 (export from Phantom: Settings → Export Private Key). Stored only in <span class="addr">bot-config.json</span> on your machine, never sent to any server.</p>
+        <label class="field"><span>Private key (base58)</span><input id="bot-key" type="password" placeholder="only needed for live mode" spellcheck="false"></label>
         <div class="settings-actions">
-          <button id="btn-bot-save" class="btn btn-primary">Simpan &amp; sinkron ke bot</button>
+          <button id="btn-bot-save" class="btn btn-primary">Save &amp; sync to bot</button>
           <span id="bot-status" class="dim"></span>
         </div>
         <div id="bot-sync-info" class="monitor-status"></div>
       </div>
 
       <div class="settings-card" style="grid-column: 1 / -1">
-        <h3>Cara menjalankan</h3>
+        <h3>How to run</h3>
         <ol class="steps">
-          <li>Isi parameter di atas → <b>Simpan &amp; sinkron ke bot</b> (menulis <span class="addr">bot-config.json</span>).</li>
-          <li>Buka terminal di folder ini, jalankan <span class="addr">node bot.js</span>. Biarkan jendela terbuka — selama itu bot memantau.</li>
-          <li>Mode <b>Simulasi</b> dulu beberapa hari: setiap dev watchlist launch, kamu dapat sinyal Telegram tanpa uang. Cek akurasinya.</li>
-          <li>Kalau sudah yakin, pindah ke <b>Live</b> + isi private key wallet burner, Simpan lagi, restart bot. Untuk 24/7 taruh di VPS.</li>
+          <li>Fill in the parameters above → <b>Save &amp; sync to bot</b> (writes <span class="addr">bot-config.json</span>).</li>
+          <li>Open a terminal in this folder and run <span class="addr">node bot.js</span>. Keep the window open — the bot monitors while it's running.</li>
+          <li>Run <b>Simulation</b> mode for a few days first: every time a watchlist dev launches, you get a Telegram signal with no money involved. Check the accuracy.</li>
+          <li>Once you're confident, switch to <b>Live</b> + add your burner wallet private key, save again, restart the bot. For 24/7, put it on a VPS.</li>
         </ol>
       </div>
     </div>
   </section>
 
-  <!-- ============ PENGATURAN ============ -->
+  <!-- ============ SETTINGS ============ -->
   <section id="tab-settings" class="tab">
     <div class="settings-grid">
       <div class="settings-card">
-        <h3>Telegram — kirim signal</h3>
-        <p class="hint-text">Signal watchlist (dev launch token baru, lengkap dengan CA) dikirim <b>otomatis selama halaman ini terbuka</b>; signal hasil scan dikirim lewat tombol "Kirim signal Telegram" setelah scan selesai. Token &amp; key tersimpan hanya di browser kamu (localStorage), tidak pernah disimpan di server.</p>
+        <h3>Telegram — send signals</h3>
+        <p class="hint-text">Watchlist signals (a dev launching a new token, with the CA) are sent <b>automatically while this page is open</b>; scan signals are sent via the "Send Telegram signal" button after a scan finishes. Token &amp; key are stored only in your browser (localStorage), never on a server.</p>
         <label class="field">
           <span>Bot token</span>
           <input id="tg-token" type="text" placeholder="123456789:AAF..." spellcheck="false">
         </label>
         <label class="field">
           <span>Chat ID</span>
-          <input id="tg-chat" type="text" placeholder="misal 5512345678" spellcheck="false">
+          <input id="tg-chat" type="text" placeholder="e.g. 5512345678" spellcheck="false">
         </label>
         <div class="settings-actions">
-          <button id="btn-tg-save" class="btn btn-primary">Simpan</button>
-          <button id="btn-tg-test" class="btn">Kirim pesan tes</button>
+          <button id="btn-tg-save" class="btn btn-primary">Save</button>
+          <button id="btn-tg-test" class="btn">Send test message</button>
           <span id="tg-status" class="dim"></span>
         </div>
         <div id="monitor-status" class="monitor-status"></div>
       </div>
       <div class="settings-card">
-        <h3>Helius — dukungan lintas launchpad</h3>
-        <p class="hint-text">Tanpa key: analisis hanya pump.fun + trace on-chain dasar. Dengan Helius (gratis): paste CA <b>Meteora/launchpad lain</b> tetap ketemu dev-nya, plus tombol <b>"Scan deploy lintas launchpad"</b> di profil dev untuk melihat SEMUA token yang pernah dia deploy, launchpad apa pun.</p>
+        <h3>Helius — cross-launchpad support</h3>
+        <p class="hint-text">Without a key: analysis is pump.fun only + basic on-chain trace. With Helius (free): paste a <b>Meteora / other launchpad</b> CA and still find the dev, plus a <b>"Scan cross-launchpad deploys"</b> button on the dev profile to see EVERY token they've ever deployed, on any launchpad.</p>
         <label class="field">
           <span>Helius API key</span>
-          <input id="helius-key" type="text" placeholder="key dari dashboard.helius.dev (daftar gratis)" spellcheck="false">
+          <input id="helius-key" type="text" placeholder="key from dashboard.helius.dev (free signup)" spellcheck="false">
         </label>
         <div class="settings-actions">
-          <button id="btn-helius-save" class="btn btn-primary">Simpan</button>
-          <button id="btn-helius-test" class="btn">Tes koneksi</button>
+          <button id="btn-helius-save" class="btn btn-primary">Save</button>
+          <button id="btn-helius-test" class="btn">Test connection</button>
           <span id="helius-status" class="dim"></span>
         </div>
       </div>
       <div class="settings-card">
-        <h3>Cara mendapatkan token &amp; chat ID</h3>
+        <h3>How to get a token &amp; chat ID</h3>
         <ol class="steps">
-          <li>Buka Telegram, chat <span class="addr">@BotFather</span>, kirim <span class="addr">/newbot</span>, ikuti instruksinya — kamu dapat <b>bot token</b>.</li>
-          <li>Chat <span class="addr">@userinfobot</span> untuk melihat <b>chat ID</b> kamu (angka).</li>
-          <li>Buka chat dengan bot barumu dan tekan <b>Start</b> (wajib, supaya bot boleh mengirimimu pesan).</li>
-          <li>Tempel token &amp; chat ID di sini, Simpan, lalu "Kirim pesan tes".</li>
+          <li>Open Telegram, chat <span class="addr">@BotFather</span>, send <span class="addr">/newbot</span>, follow the steps — you get a <b>bot token</b>.</li>
+          <li>Chat <span class="addr">@userinfobot</span> to see your <b>chat ID</b> (a number).</li>
+          <li>Open a chat with your new bot and press <b>Start</b> (required, so the bot is allowed to message you).</li>
+          <li>Paste the token &amp; chat ID here, Save, then "Send test message".</li>
         </ol>
       </div>
     </div>
@@ -211,9 +212,9 @@
   <!-- ============ WATCHLIST ============ -->
   <section id="tab-watchlist" class="tab">
     <div class="toolbar">
-      <input id="wl-wallet" type="text" placeholder="Alamat wallet dev" spellcheck="false">
-      <input id="wl-label" type="text" placeholder="Label (opsional)" class="input-sm" spellcheck="false">
-      <button id="btn-wl-add" class="btn btn-primary">Tambah</button>
+      <input id="wl-wallet" type="text" placeholder="Dev wallet address" spellcheck="false">
+      <input id="wl-label" type="text" placeholder="Label (optional)" class="input-sm" spellcheck="false">
+      <button id="btn-wl-add" class="btn btn-primary">Add</button>
       <button id="btn-wl-refresh" class="btn">Refresh</button>
       <div class="toolbar-status" id="wl-status"></div>
     </div>
@@ -224,28 +225,28 @@
           <tr>
             <th>Dev</th>
             <th>Label</th>
-            <th class="col-score">Skor</th>
-            <th class="num">Launch</th>
-            <th class="num">Graduate</th>
-            <th class="num">ATH terbaik</th>
-            <th>Launch terakhir</th>
+            <th class="col-score">Score</th>
+            <th class="num">Launches</th>
+            <th class="num">Graduated</th>
+            <th class="num">Best ATH</th>
+            <th>Last launch</th>
             <th class="col-act"></th>
           </tr>
         </thead>
         <tbody id="wl-body">
-          <tr><td colspan="8" class="empty-cell">Watchlist kosong.</td></tr>
+          <tr><td colspan="8" class="empty-cell">Watchlist is empty.</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 </main>
 
-<!-- ============ DRAWER DETAIL ============ -->
+<!-- ============ DETAIL DRAWER ============ -->
 <div id="overlay" class="overlay hidden"></div>
 <aside id="drawer" class="drawer">
   <div class="drawer-head">
-    <span class="drawer-title">Profil developer</span>
-    <button id="drawer-close" class="icon-btn" title="Tutup">
+    <span class="drawer-title">Developer profile</span>
+    <button id="drawer-close" class="icon-btn" title="Close">
       <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
   </div>

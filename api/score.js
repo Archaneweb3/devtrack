@@ -1,6 +1,6 @@
 const { creatorSummary, json, isBase58 } = require('../lib/core');
 
-// skoring ringan untuk badge PRO di live feed (track record singkat creator)
+// lightweight scoring for the PRO badge in the live feed (brief creator track record)
 module.exports = async (req, res) => {
   try {
     const url = new URL(req.url, 'http://x');

@@ -1,5 +1,5 @@
-// devtrack — server lokal. Memakai handler yang sama dengan deployment Vercel (folder api/).
-// Watchlist & settings tersimpan di browser (localStorage), jadi server ini stateless.
+// devtrack — local server. Uses the same handlers as the Vercel deployment (api/ folder).
+// Watchlist & settings are stored in the browser (localStorage), so this server is stateless.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -19,7 +19,7 @@ const routes = {
   score: require('./api/score'),
 };
 
-// jembatan bot (khusus lokal): browser push watchlist+settings → file yang dibaca bot.js
+// bot bridge (local only): browser pushes watchlist+settings → file read by bot.js
 const BOT_CONFIG = path.join(__dirname, 'bot-config.json');
 function readBotConfig() {
   try { return JSON.parse(fs.readFileSync(BOT_CONFIG, 'utf8')); } catch { return {}; }
@@ -36,7 +36,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const p = url.pathname;
   try {
-    // sinkron config bot (lokal saja — dipakai bot.js untuk auto-buy)
+    // sync bot config (local only — used by bot.js for auto-buy)
     if (p === '/api/bot-config') {
       if (req.method === 'POST') {
         let raw = '';
@@ -56,7 +56,7 @@ const server = http.createServer(async (req, res) => {
       const handler = routes[name];
       if (!handler) {
         res.writeHead(404, { 'content-type': 'application/json' });
-        return res.end(JSON.stringify({ error: 'Endpoint tidak ditemukan' }));
+        return res.end(JSON.stringify({ error: 'Endpoint not found' }));
       }
       return handler(req, res);
     }
@@ -76,5 +76,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`devtrack jalan di http://localhost:${PORT}`);
+  console.log(`devtrack running at http://localhost:${PORT}`);
 });
