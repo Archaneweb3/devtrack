@@ -102,6 +102,27 @@
       </div>
 
       <div class="settings-card">
+        <h3>Auto-sell — amankan modal &amp; ambil profit</h3>
+        <p class="hint-text">Bot memantau harga token yang dibeli secara real-time dan menjual otomatis saat mencapai target. Contoh: jual 50% di 2x = balik modal, sisanya jalan gratis.</p>
+        <div class="tp-row">
+          <span class="tp-label">Take-profit 1</span>
+          jual <input id="tp1-pct" type="number" min="1" max="100" value="50">% di
+          <input id="tp1-mult" type="number" min="1.1" step="0.1" value="2">x
+        </div>
+        <div class="tp-row">
+          <span class="tp-label">Take-profit 2</span>
+          jual <input id="tp2-pct" type="number" min="0" max="100" value="25">% di
+          <input id="tp2-mult" type="number" min="0" step="0.5" value="5">x <span class="dim">(0 = nonaktif)</span>
+        </div>
+        <div class="tp-row">
+          <span class="tp-label">Stop-loss</span>
+          jual <input id="sl-pct" type="number" min="0" max="100" value="0">% di
+          <input id="sl-mult" type="number" min="0" max="1" step="0.05" value="0">x <span class="dim">(0 = nonaktif)</span>
+        </div>
+        <p class="hint-text" style="margin:10px 0 0">Take-profit berlaku di simulasi maupun live — di simulasi kamu dapat sinyal jual tanpa eksekusi, jadi bisa uji strateginya dulu.</p>
+      </div>
+
+      <div class="settings-card">
         <h3 id="bot-key-title">Wallet burner (hanya untuk mode Live)</h3>
         <p class="hint-text">Pakai wallet <b>khusus bot</b> berisi dana kecil — <b>bukan</b> wallet utamamu. Private key format base58 (ekspor dari Phantom: Settings → Export Private Key). Tersimpan hanya di <span class="addr">bot-config.json</span> di komputermu, tidak pernah dikirim ke server mana pun.</p>
         <label class="field"><span>Private key (base58)</span><input id="bot-key" type="password" placeholder="hanya diperlukan untuk mode live" spellcheck="false"></label>

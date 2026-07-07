@@ -384,6 +384,11 @@ td.col-rank { color: var(--faint); font-size: .78rem; }
 .settings-actions .dim { font-size: .8rem; }
 .monitor-status { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--muted); font-size: .8rem; line-height: 1.6; }
 .monitor-status b { color: var(--text); }
+.tp-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; font-size: .85rem; color: var(--muted); }
+.tp-label { display: inline-block; min-width: 96px; font-size: .68rem; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+.tp-row input { width: 60px; background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--text); height: 32px; padding: 0 8px; border-radius: 8px; font-family: var(--mono); font-size: .8rem; text-align: right; outline: none; }
+.tp-row input:focus { border-color: rgba(91,140,255,.5); box-shadow: 0 0 0 3px rgba(91,140,255,.12); }
+.tp-row input::-webkit-outer-spin-button, .tp-row input::-webkit-inner-spin-button { -webkit-appearance: none; }
 .bot-mode { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .radio { display: flex; align-items: flex-start; gap: 10px; font-size: .85rem; color: var(--muted); cursor: pointer; }
 .radio input { margin-top: 3px; accent-color: var(--accent); }

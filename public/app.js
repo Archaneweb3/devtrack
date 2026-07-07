@@ -70,7 +70,12 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 });
 
 // ================= auto-buy bot =================
-let botCfg = store.get('botcfg', { mode: 'simulation', buySol: 0.05, slippage: 15, priorityFee: 0.001, maxBuysPerDevPerDay: 1, privateKey: '' });
+let botCfg = store.get('botcfg', {
+  mode: 'simulation', buySol: 0.05, slippage: 15, priorityFee: 0.001, maxBuysPerDevPerDay: 1, privateKey: '',
+  takeProfit: [{ mult: 2, pct: 50 }, { mult: 5, pct: 25 }], stopLoss: { mult: 0, pct: 0 },
+});
+botCfg.takeProfit = botCfg.takeProfit || [{ mult: 2, pct: 50 }, { mult: 5, pct: 25 }];
+botCfg.stopLoss = botCfg.stopLoss || { mult: 0, pct: 0 };
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 
 function renderBot() {
@@ -81,6 +86,13 @@ function renderBot() {
   $('#bot-priority').value = botCfg.priorityFee;
   $('#bot-maxbuys').value = botCfg.maxBuysPerDevPerDay;
   $('#bot-key').value = botCfg.privateKey || '';
+  const tp = botCfg.takeProfit;
+  $('#tp1-pct').value = tp[0]?.pct ?? 50;
+  $('#tp1-mult').value = tp[0]?.mult ?? 2;
+  $('#tp2-pct').value = tp[1]?.pct ?? 0;
+  $('#tp2-mult').value = tp[1]?.mult ?? 0;
+  $('#sl-pct').value = botCfg.stopLoss?.pct ?? 0;
+  $('#sl-mult').value = botCfg.stopLoss?.mult ?? 0;
   refreshBotSyncInfo();
 }
 
@@ -101,7 +113,9 @@ async function syncBotConfig() {
     await api('/api/bot-config', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        ...botCfg,
+        mode: botCfg.mode, buySol: botCfg.buySol, slippage: botCfg.slippage,
+        priorityFee: botCfg.priorityFee, maxBuysPerDevPerDay: botCfg.maxBuysPerDevPerDay,
+        privateKey: botCfg.privateKey, takeProfit: botCfg.takeProfit, stopLoss: botCfg.stopLoss,
         tgToken: settings.tgToken, tgChat: settings.tgChat, heliusKey: settings.heliusKey,
         watchlist: watchlist.map(w => ({ wallet: w.wallet, label: w.label })),
       }),
@@ -116,6 +130,14 @@ $('#btn-bot-save').addEventListener('click', async () => {
   botCfg.priorityFee = parseFloat($('#bot-priority').value) || 0.001;
   botCfg.maxBuysPerDevPerDay = parseInt($('#bot-maxbuys').value, 10) || 1;
   botCfg.privateKey = $('#bot-key').value.trim();
+  // aturan jual
+  const tp = [];
+  const t1m = parseFloat($('#tp1-mult').value), t1p = parseFloat($('#tp1-pct').value);
+  const t2m = parseFloat($('#tp2-mult').value), t2p = parseFloat($('#tp2-pct').value);
+  if (t1m > 1 && t1p > 0) tp.push({ mult: t1m, pct: t1p });
+  if (t2m > 1 && t2p > 0) tp.push({ mult: t2m, pct: t2p });
+  botCfg.takeProfit = tp;
+  botCfg.stopLoss = { mult: parseFloat($('#sl-mult').value) || 0, pct: parseFloat($('#sl-pct').value) || 0 };
   store.set('botcfg', botCfg);
   const st = $('#bot-status');
   if (botCfg.mode === 'live' && !botCfg.privateKey) {
